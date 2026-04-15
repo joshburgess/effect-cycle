@@ -23,7 +23,7 @@ import { WSSink, WSSource } from "effect-cycle-ws"
 describe("TestDOMSource", () => {
   it.effect("emits scripted events for the correct selector", () =>
     Effect.gen(function* () {
-      const clickEvent = new Event("click")
+      const clickEvent = yield* Effect.sync(() => new Event("click"))
       const layer = TestDOMSource({ ".btn": [clickEvent] })
 
       const source = yield* DOMSource.pipe(Effect.provide(layer))
@@ -169,8 +169,8 @@ describe("TestHTTPSink", () => {
 describe("TestWSSource", () => {
   it.effect("emits scripted messages", () =>
     Effect.gen(function* () {
-      const msg1 = new MessageEvent("message", { data: "hello" })
-      const msg2 = new MessageEvent("message", { data: "world" })
+      const msg1 = yield* Effect.sync(() => new MessageEvent("message", { data: "hello" }))
+      const msg2 = yield* Effect.sync(() => new MessageEvent("message", { data: "world" }))
       const layer = TestWSSource([msg1, msg2])
 
       const source = yield* WSSource.pipe(Effect.provide(layer))
@@ -227,7 +227,7 @@ describe("TestWSSink", () => {
   it.effect("captures ArrayBuffer messages", () =>
     Effect.gen(function* () {
       const { layer, captured } = yield* TestWSSink()
-      const buf = new ArrayBuffer(4)
+      const buf = yield* Effect.sync(() => new ArrayBuffer(4))
 
       const sink = yield* WSSink.pipe(Effect.provide(layer))
       yield* sink.send(Stream.make(buf))
@@ -261,7 +261,7 @@ describe("runTest", () => {
     const app = Effect.gen(function* () {
       const source = yield* DOMSource
       const events = yield* Stream.runCollect(source.select(".btn", "click"))
-      results.push(`events:${events.length}`)
+      yield* Effect.sync(() => results.push(`events:${events.length}`))
     })
 
     const clickEvent = new Event("click")
@@ -280,7 +280,7 @@ describe("runTest", () => {
       const sink = yield* DOMSink
       const events = yield* Stream.runCollect(source.select(".btn", "click"))
       yield* sink.render(Stream.make(`<p>count:${events.length}</p>`))
-      results.push("done")
+      yield* Effect.sync(() => results.push("done"))
     })
 
     const clickEvent = new Event("click")

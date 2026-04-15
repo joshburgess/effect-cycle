@@ -1,3 +1,7 @@
+import { merge } from "aeon-core"
+import { fromDOMEvent } from "aeon-dom"
+import { toStream } from "aeon-effect"
+import { DefaultScheduler } from "aeon-scheduler"
 import { Context, Effect, Layer, Stream } from "effect"
 import morphdom from "morphdom"
 import { DOMConfig } from "./DOMConfig.js"
@@ -29,20 +33,17 @@ export const DOMDriverLive: Layer.Layer<DOMSource | DOMSink, DOMError, DOMConfig
         }),
       )
 
+      const scheduler = yield* Effect.sync(() => new DefaultScheduler())
+
       const source: DOMSource["Type"] = {
-        select: (selector: string, eventType: string) =>
-          Stream.async<Event>((emit) => {
-            const handler = (event: Event) => {
-              void emit.single(event)
-            }
+        select: (selector: string, eventType: string) => {
+          const elements = Array.from(root.querySelectorAll(selector))
+          if (elements.length === 0) return Stream.empty
 
-            const elements = root.querySelectorAll(selector)
-            elements.forEach((el) => el.addEventListener(eventType, handler))
-
-            return Effect.sync(() => {
-              elements.forEach((el) => el.removeEventListener(eventType, handler))
-            })
-          }),
+          const events = elements.map((el) => fromDOMEvent(eventType, el))
+          const combined = events.length === 1 ? events[0]! : merge(...events)
+          return toStream(combined, scheduler)
+        },
 
         element: Effect.succeed(root),
       }

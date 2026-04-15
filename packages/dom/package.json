@@ -29,7 +29,12 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "morphdom": "^2.7.0"
+    "morphdom": "^2.7.0",
+    "aeon-core": "link:../../../aeon/packages/core",
+    "aeon-types": "link:../../../aeon/packages/types",
+    "aeon-scheduler": "link:../../../aeon/packages/scheduler",
+    "aeon-dom": "link:../../../aeon/packages/dom",
+    "aeon-effect": "link:../../../aeon/packages/effect"
   },
   "peerDependencies": {
     "effect": "^3.14.0",

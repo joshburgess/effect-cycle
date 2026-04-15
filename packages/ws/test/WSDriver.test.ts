@@ -128,7 +128,7 @@ describe("WSSink", () => {
       const sink = makeSyncTestWSSink(captured)
       const TestWSSinkLayer = Layer.succeed(WSSink, sink)
 
-      const buf = new ArrayBuffer(4)
+      const buf = yield* Effect.sync(() => new ArrayBuffer(4))
 
       yield* Effect.gen(function* () {
         const wsSink = yield* WSSink

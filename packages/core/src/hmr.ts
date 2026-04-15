@@ -23,7 +23,7 @@ export interface HotRuntime<R> {
  */
 export const makeHotRuntime = <R>(drivers: Layer.Layer<R>): Effect.Effect<HotRuntime<R>> =>
   Effect.gen(function* () {
-    const runtime = ManagedRuntime.make(drivers)
+    const runtime = yield* Effect.sync(() => ManagedRuntime.make(drivers))
     const currentFiber = yield* Ref.make<Option.Option<Fiber.RuntimeFiber<void, unknown>>>(
       Option.none(),
     )
@@ -36,7 +36,7 @@ export const makeHotRuntime = <R>(drivers: Layer.Layer<R>): Effect.Effect<HotRun
           if (Option.isSome(prev)) {
             yield* Effect.promise(() => runtime.runPromise(Fiber.interrupt(prev.value)))
           }
-          const fiber = runtime.runFork(app)
+          const fiber = yield* Effect.sync(() => runtime.runFork(app))
           yield* Ref.set(currentFiber, Option.some(fiber))
         }),
 

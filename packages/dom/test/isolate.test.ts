@@ -49,8 +49,10 @@ describe("isolate", () => {
         yield* Queue.offer(queue, ns)
 
         // Now click the root button — isolated component should NOT receive this
-        const rootBtn = document.querySelector("#app > .btn") as HTMLButtonElement
-        rootBtn.click()
+        yield* Effect.sync(() => {
+          const rootBtn = document.querySelector("#app > .btn") as HTMLButtonElement
+          rootBtn.click()
+        })
 
         // Brief async pause to let any spurious events flush
         yield* Effect.async<void>((resolve) => {

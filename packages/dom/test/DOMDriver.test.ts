@@ -70,7 +70,7 @@ describe("DOMDriverLive", () => {
         yield* Effect.yieldNow()
         yield* Effect.yieldNow()
 
-        const app = document.querySelector("#app")
+        const app = yield* Effect.sync(() => document.querySelector("#app"))
         expect(app?.innerHTML).toBe("<p>hello</p>")
       }).pipe(Effect.provide(DOMDriverLive), Effect.provide(makeTestConfig("#app"))),
     )
@@ -84,13 +84,13 @@ describe("DOMDriverLive", () => {
             // Yield to let the forked fiber process the synchronous stream
             yield* Effect.yieldNow()
             yield* Effect.yieldNow()
-            const app = document.querySelector("#app")
+            const app = yield* Effect.sync(() => document.querySelector("#app"))
             expect(app?.innerHTML).toBe("<p>temporary</p>")
           }).pipe(Effect.provide(DOMDriverLive), Effect.provide(makeTestConfig("#app"))),
         )
 
         // After scope closes, finalizer should have cleared innerHTML
-        const app = document.querySelector("#app")
+        const app = yield* Effect.sync(() => document.querySelector("#app"))
         expect(app?.innerHTML).toBe("")
       }),
     )
@@ -114,8 +114,8 @@ describe("DOMDriverLive", () => {
         yield* Effect.yieldNow()
         yield* Effect.yieldNow()
 
-        const app = document.querySelector("#app")
-        const originalNode = app?.querySelector("#x")
+        const app = yield* Effect.sync(() => document.querySelector("#app"))
+        const originalNode = yield* Effect.sync(() => app?.querySelector("#x"))
         expect(originalNode?.textContent).toBe("old")
 
         // Render updated content — morphdom should patch, not replace
@@ -123,7 +123,7 @@ describe("DOMDriverLive", () => {
         yield* Effect.yieldNow()
         yield* Effect.yieldNow()
 
-        const updatedNode = app?.querySelector("#x")
+        const updatedNode = yield* Effect.sync(() => app?.querySelector("#x"))
         expect(updatedNode?.textContent).toBe("new")
         expect(updatedNode).toBe(originalNode)
       }).pipe(Effect.provide(DOMDriverLive), Effect.provide(makeTestConfig("#app"))),

@@ -1,6 +1,9 @@
 import * as HttpClient from "@effect/platform/HttpClient"
 import type * as HttpClientResponse from "@effect/platform/HttpClientResponse"
-import { Context, Effect, Layer, PubSub, Stream } from "effect"
+import { createAdapter, filter, map } from "aeon-core"
+import { toStream } from "aeon-effect"
+import { DefaultScheduler } from "aeon-scheduler"
+import { Context, Effect, Layer, Stream } from "effect"
 import { HTTPSink } from "./HTTPSink.js"
 import { HTTPSource } from "./HTTPSource.js"
 import { HTTPError } from "./errors.js"
@@ -10,19 +13,21 @@ export const HTTPDriverLive: Layer.Layer<HTTPSource | HTTPSink, never, HttpClien
     Effect.gen(function* () {
       const httpClient = yield* HttpClient.HttpClient
       const scope = yield* Effect.scope
-      const pubsub = yield* PubSub.unbounded<{
-        category: string
-        response: HttpClientResponse.HttpClientResponse
-      }>()
 
-      yield* Effect.addFinalizer(() => PubSub.shutdown(pubsub))
+      const scheduler = yield* Effect.sync(() => new DefaultScheduler())
+      const [push, responseEvent] = yield* Effect.sync(() =>
+        createAdapter<{
+          category: string
+          response: HttpClientResponse.HttpClientResponse
+        }>(),
+      )
 
       const source: HTTPSource["Type"] = {
-        response: (category) =>
-          Stream.fromPubSub(pubsub).pipe(
-            Stream.filter((msg) => msg.category === category),
-            Stream.map((msg) => msg.response),
-          ),
+        response: (category) => {
+          const filtered = filter((msg) => msg.category === category, responseEvent)
+          const mapped = map((msg) => msg.response, filtered)
+          return toStream(mapped, scheduler)
+        },
       }
 
       const sink: HTTPSink["Type"] = {
@@ -40,7 +45,7 @@ export const HTTPDriverLive: Layer.Layer<HTTPSource | HTTPSink, never, HttpClien
                 ),
                 Effect.scoped,
               )
-              yield* PubSub.publish(pubsub, { category, response })
+              yield* Effect.sync(() => push({ category, response }))
             }).pipe(Effect.catchAll(() => Effect.void)),
           ).pipe(Effect.forkIn(scope), Effect.asVoid),
       }

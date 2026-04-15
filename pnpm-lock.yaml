@@ -143,6 +143,21 @@ importers:
 
   packages/dom:
     dependencies:
+      aeon-core:
+        specifier: link:../../../aeon/packages/core
+        version: link:../../../aeon/packages/core
+      aeon-dom:
+        specifier: link:../../../aeon/packages/dom
+        version: link:../../../aeon/packages/dom
+      aeon-effect:
+        specifier: link:../../../aeon/packages/effect
+        version: link:../../../aeon/packages/effect
+      aeon-scheduler:
+        specifier: link:../../../aeon/packages/scheduler
+        version: link:../../../aeon/packages/scheduler
+      aeon-types:
+        specifier: link:../../../aeon/packages/types
+        version: link:../../../aeon/packages/types
       morphdom:
         specifier: ^2.7.0
         version: 2.7.8
@@ -158,6 +173,19 @@ importers:
         version: 5.9.3
 
   packages/http:
+    dependencies:
+      aeon-core:
+        specifier: link:../../../aeon/packages/core
+        version: link:../../../aeon/packages/core
+      aeon-effect:
+        specifier: link:../../../aeon/packages/effect
+        version: link:../../../aeon/packages/effect
+      aeon-scheduler:
+        specifier: link:../../../aeon/packages/scheduler
+        version: link:../../../aeon/packages/scheduler
+      aeon-types:
+        specifier: link:../../../aeon/packages/types
+        version: link:../../../aeon/packages/types
     devDependencies:
       '@effect/platform':
         specifier: ^0.78.0

@@ -8,7 +8,12 @@
       "effect-cycle-http": ["./packages/http/src/index.ts"],
       "effect-cycle-ws": ["./packages/ws/src/index.ts"],
       "effect-cycle-testing": ["./packages/testing/src/index.ts"],
-      "effect-cycle-devtools": ["./packages/devtools/src/index.ts"]
+      "effect-cycle-devtools": ["./packages/devtools/src/index.ts"],
+      "aeon-types": ["../aeon/packages/types/src/index.ts"],
+      "aeon-core": ["../aeon/packages/core/src/index.ts"],
+      "aeon-scheduler": ["../aeon/packages/scheduler/src/index.ts"],
+      "aeon-dom": ["../aeon/packages/dom/src/index.ts"],
+      "aeon-effect": ["../aeon/packages/effect/src/index.ts"]
     }
   },
   "include": [

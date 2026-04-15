@@ -55,7 +55,7 @@ describe("run", () => {
 describe("makeManagedRuntime", () => {
   it.effect("creates a runtime, runs the app, and can be disposed", () =>
     Effect.gen(function* () {
-      const runtime = makeManagedRuntime(CounterServiceLive)
+      const runtime = yield* Effect.sync(() => makeManagedRuntime(CounterServiceLive))
 
       const result = yield* Effect.promise(() =>
         runtime.runPromise(

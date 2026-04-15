@@ -28,6 +28,12 @@
     "test": "vitest run",
     "clean": "rm -rf dist"
   },
+  "dependencies": {
+    "aeon-core": "link:../../../aeon/packages/core",
+    "aeon-types": "link:../../../aeon/packages/types",
+    "aeon-scheduler": "link:../../../aeon/packages/scheduler",
+    "aeon-effect": "link:../../../aeon/packages/effect"
+  },
   "peerDependencies": {
     "effect": "^3.14.0",
     "@effect/platform": "^0.78.0",
