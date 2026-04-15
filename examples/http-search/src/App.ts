@@ -27,18 +27,19 @@ const app = Effect.gen(function* () {
 
   // Listen to keyup events on the search input.
   // dom.select returns a Stream<Event> scoped to the driver's root element.
-  const keyup$ = dom.select(".search-input")
+  const keyup$ = dom.select(".search-input", "keyup")
 
   // Transform the raw event stream into a stream of request objects:
   //   1. Extract the typed value from the input element
   //   2. Debounce to avoid a request on every keystroke
   //   3. Map each value to a GET request
   const req$ = keyup$.pipe(
-    Stream.map((event) => {
-      // The DOM gives us a generic Event; we cast to access .value.
-      const input = event.target as HTMLInputElement
-      return input.value
-    }),
+    Stream.mapEffect((event) =>
+      Effect.sync(() => {
+        const input = event.target as HTMLInputElement
+        return input.value
+      }),
+    ),
     // Only fire a request if the user pauses typing for 300 ms.
     Stream.debounce("300 millis"),
     Stream.map((value) => HttpClientRequest.get(`/api/search?q=${encodeURIComponent(value)}`)),

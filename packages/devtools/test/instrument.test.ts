@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import { describe, expect, it } from "@effect/vitest"
-import { Chunk, Effect, Layer, Metric, Stream } from "effect"
+import { Chunk, Effect, Layer, Metric, Ref, Stream } from "effect"
 import { domEventCount, httpRequestCount } from "effect-cycle-core"
 import {
   DevToolsConfig,
@@ -38,7 +38,7 @@ describe("instrumentDOMSource", () => {
       const before = yield* Metric.value(domEventCount)
 
       const source = yield* DOMSource
-      const eventsChunk = yield* Stream.runCollect(source.select(".btn"))
+      const eventsChunk = yield* Stream.runCollect(source.select(".btn", "click"))
       const events = Chunk.toArray(eventsChunk)
 
       expect(events.length).toBe(1)
@@ -58,7 +58,7 @@ describe("instrumentDOMSource", () => {
   it.effect("passes through events when metrics and logging disabled", () =>
     Effect.gen(function* () {
       const source = yield* DOMSource
-      const eventsChunk = yield* Stream.runCollect(source.select(".link"))
+      const eventsChunk = yield* Stream.runCollect(source.select(".link", "click"))
       const events = Chunk.toArray(eventsChunk)
       expect(events.length).toBe(2)
     }).pipe(
@@ -88,7 +88,7 @@ describe("instrumentHTTP", () => {
     Effect.gen(function* () {
       const before = yield* Metric.value(httpRequestCount)
 
-      const { layer: sinkLayer, captured } = TestHTTPSink()
+      const { layer: sinkLayer, captured } = yield* TestHTTPSink()
       const sourceLayer = TestHTTPSource({})
 
       const sink = yield* HTTPSink.pipe(
@@ -103,8 +103,9 @@ describe("instrumentHTTP", () => {
       const req = HttpClientRequest.get("https://example.com/data")
       yield* sink.request("data", Stream.make(req))
 
-      expect(captured.length).toBe(1)
-      expect(captured[0]?.category).toBe("data")
+      const items = Chunk.toReadonlyArray(yield* Ref.get(captured))
+      expect(items.length).toBe(1)
+      expect(items[0]?.category).toBe("data")
 
       const after = yield* Metric.value(httpRequestCount)
       expect(after.count).toBeGreaterThan(before.count)

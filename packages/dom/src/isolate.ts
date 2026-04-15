@@ -36,17 +36,17 @@ export const isolate = <A, E, R>(
       )
 
       const namespacedSource: DOMSource["Type"] = {
-        select: (selector: string) =>
+        select: (selector: string, eventType: string) =>
           Stream.async<Event>((emit) => {
             const handler = (event: Event) => {
               void emit.single(event)
             }
 
             const elements = root.querySelectorAll(selector)
-            elements.forEach((el) => el.addEventListener("click", handler))
+            elements.forEach((el) => el.addEventListener(eventType, handler))
 
             return Effect.sync(() => {
-              elements.forEach((el) => el.removeEventListener("click", handler))
+              elements.forEach((el) => el.removeEventListener(eventType, handler))
             })
           }),
 

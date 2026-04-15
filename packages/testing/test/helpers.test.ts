@@ -2,7 +2,7 @@ import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 // @vitest-environment jsdom
 import { describe, expect, it } from "@effect/vitest"
-import { Chunk, Effect, Layer, Stream } from "effect"
+import { Chunk, Effect, Layer, Ref, Stream } from "effect"
 import { DOMSink, DOMSource } from "effect-cycle-dom"
 import { HTTPSink, HTTPSource } from "effect-cycle-http"
 import {
@@ -27,7 +27,7 @@ describe("TestDOMSource", () => {
       const layer = TestDOMSource({ ".btn": [clickEvent] })
 
       const source = yield* DOMSource.pipe(Effect.provide(layer))
-      const eventsChunk = yield* Stream.runCollect(source.select(".btn"))
+      const eventsChunk = yield* Stream.runCollect(source.select(".btn", "click"))
       const events = Chunk.toArray(eventsChunk)
 
       expect(events.length).toBe(1)
@@ -40,7 +40,7 @@ describe("TestDOMSource", () => {
       const layer = TestDOMSource({})
 
       const source = yield* DOMSource.pipe(Effect.provide(layer))
-      const eventsChunk = yield* Stream.runCollect(source.select(".unknown"))
+      const eventsChunk = yield* Stream.runCollect(source.select(".unknown", "click"))
       const events = Chunk.toArray(eventsChunk)
 
       expect(events.length).toBe(0)
@@ -66,22 +66,24 @@ describe("TestDOMSource", () => {
 describe("TestDOMSink", () => {
   it.effect("captures rendered VNodes in order", () =>
     Effect.gen(function* () {
-      const { layer, rendered } = TestDOMSink()
+      const { layer, rendered } = yield* TestDOMSink()
 
       const sink = yield* DOMSink.pipe(Effect.provide(layer))
       yield* sink.render(Stream.make("<p>hello</p>", "<p>world</p>"))
 
-      expect(rendered).toEqual(["<p>hello</p>", "<p>world</p>"])
+      const items = Chunk.toReadonlyArray(yield* Ref.get(rendered))
+      expect(items).toEqual(["<p>hello</p>", "<p>world</p>"])
     }),
   )
 
-  it.effect("starts with an empty rendered array", () =>
+  it.effect("starts with an empty rendered chunk", () =>
     Effect.gen(function* () {
-      const { layer, rendered } = TestDOMSink()
+      const { layer, rendered } = yield* TestDOMSink()
 
       yield* DOMSink.pipe(Effect.provide(layer))
 
-      expect(rendered).toEqual([])
+      const items = Chunk.toReadonlyArray(yield* Ref.get(rendered))
+      expect(items).toEqual([])
     }),
   )
 })
@@ -130,7 +132,7 @@ describe("TestHTTPSource", () => {
 describe("TestHTTPSink", () => {
   it.effect("captures requests with correct categories", () =>
     Effect.gen(function* () {
-      const { layer, captured } = TestHTTPSink()
+      const { layer, captured } = yield* TestHTTPSink()
 
       const usersReq = HttpClientRequest.get("https://example.com/users")
       const postsReq = HttpClientRequest.get("https://example.com/posts")
@@ -139,21 +141,23 @@ describe("TestHTTPSink", () => {
       yield* sink.request("users", Stream.make(usersReq))
       yield* sink.request("posts", Stream.make(postsReq))
 
-      expect(captured.length).toBe(2)
-      expect(captured[0]?.category).toBe("users")
-      expect(captured[0]?.request.url).toBe("https://example.com/users")
-      expect(captured[1]?.category).toBe("posts")
-      expect(captured[1]?.request.url).toBe("https://example.com/posts")
+      const items = Chunk.toReadonlyArray(yield* Ref.get(captured))
+      expect(items.length).toBe(2)
+      expect(items[0]?.category).toBe("users")
+      expect(items[0]?.request.url).toBe("https://example.com/users")
+      expect(items[1]?.category).toBe("posts")
+      expect(items[1]?.request.url).toBe("https://example.com/posts")
     }),
   )
 
-  it.effect("starts with an empty captured array", () =>
+  it.effect("starts with an empty captured chunk", () =>
     Effect.gen(function* () {
-      const { layer, captured } = TestHTTPSink()
+      const { layer, captured } = yield* TestHTTPSink()
 
       yield* HTTPSink.pipe(Effect.provide(layer))
 
-      expect(captured).toEqual([])
+      const items = Chunk.toReadonlyArray(yield* Ref.get(captured))
+      expect(items).toEqual([])
     }),
   )
 })
@@ -210,35 +214,38 @@ describe("TestWSSource", () => {
 describe("TestWSSink", () => {
   it.effect("captures sent messages", () =>
     Effect.gen(function* () {
-      const { layer, captured } = TestWSSink()
+      const { layer, captured } = yield* TestWSSink()
 
       const sink = yield* WSSink.pipe(Effect.provide(layer))
       yield* sink.send(Stream.make("hello", "world"))
 
-      expect(captured).toEqual(["hello", "world"])
+      const items = Chunk.toReadonlyArray(yield* Ref.get(captured))
+      expect(items).toEqual(["hello", "world"])
     }),
   )
 
   it.effect("captures ArrayBuffer messages", () =>
     Effect.gen(function* () {
-      const { layer, captured } = TestWSSink()
+      const { layer, captured } = yield* TestWSSink()
       const buf = new ArrayBuffer(4)
 
       const sink = yield* WSSink.pipe(Effect.provide(layer))
       yield* sink.send(Stream.make(buf))
 
-      expect(captured.length).toBe(1)
-      expect(captured[0]).toBe(buf)
+      const items = Chunk.toReadonlyArray(yield* Ref.get(captured))
+      expect(items.length).toBe(1)
+      expect(items[0]).toBe(buf)
     }),
   )
 
-  it.effect("starts with an empty captured array", () =>
+  it.effect("starts with an empty captured chunk", () =>
     Effect.gen(function* () {
-      const { layer, captured } = TestWSSink()
+      const { layer, captured } = yield* TestWSSink()
 
       yield* WSSink.pipe(Effect.provide(layer))
 
-      expect(captured).toEqual([])
+      const items = Chunk.toReadonlyArray(yield* Ref.get(captured))
+      expect(items).toEqual([])
     }),
   )
 })
@@ -253,7 +260,7 @@ describe("runTest", () => {
 
     const app = Effect.gen(function* () {
       const source = yield* DOMSource
-      const events = yield* Stream.runCollect(source.select(".btn"))
+      const events = yield* Stream.runCollect(source.select(".btn", "click"))
       results.push(`events:${events.length}`)
     })
 
@@ -271,19 +278,20 @@ describe("runTest", () => {
     const app = Effect.gen(function* () {
       const source = yield* DOMSource
       const sink = yield* DOMSink
-      const events = yield* Stream.runCollect(source.select(".btn"))
+      const events = yield* Stream.runCollect(source.select(".btn", "click"))
       yield* sink.render(Stream.make(`<p>count:${events.length}</p>`))
       results.push("done")
     })
 
     const clickEvent = new Event("click")
-    const { layer: sinkLayer, rendered } = TestDOMSink()
+    const { layer: sinkLayer, rendered } = await Effect.runPromise(TestDOMSink())
     const sourceLayer = TestDOMSource({ ".btn": [clickEvent] })
     const layers = Layer.merge(sourceLayer, sinkLayer)
 
     await runTest(app, layers)
 
     expect(results).toEqual(["done"])
-    expect(rendered).toEqual(["<p>count:1</p>"])
+    const items = Chunk.toReadonlyArray(await Effect.runPromise(Ref.get(rendered)))
+    expect(items).toEqual(["<p>count:1</p>"])
   })
 })

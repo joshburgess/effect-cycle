@@ -1,7 +1,7 @@
 export { TestDOMSource } from "./TestDOMSource.js"
 export { TestDOMSink } from "./TestDOMSink.js"
 export { TestHTTPSource } from "./TestHTTPSource.js"
-export { TestHTTPSink } from "./TestHTTPSink.js"
+export { TestHTTPSink, type CapturedRequest } from "./TestHTTPSink.js"
 export { TestWSSource } from "./TestWSSource.js"
 export { TestWSSink } from "./TestWSSink.js"
 export { runTest } from "./helpers.js"

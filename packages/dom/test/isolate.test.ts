@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from "@effect/vitest"
-import { Effect, Layer, Queue, Stream } from "effect"
+import { Effect, Layer, Option, Queue, Ref, Stream } from "effect"
 import { DOMConfig, DOMDriverLive, DOMSource, isolate } from "effect-cycle-dom"
 
 const makeTestConfig = (selector: string) => Layer.succeed(DOMConfig, { rootSelector: selector })
@@ -29,7 +29,7 @@ describe("isolate", () => {
       // happens inside the component Effect, before the scope closes.
       const component = Effect.gen(function* () {
         const source = yield* DOMSource
-        const stream = source.select(".btn")
+        const stream = source.select(".btn", "click")
 
         // Collect one event from the stream
         const firstClick = yield* Effect.async<Event>((resolve) => {
@@ -73,11 +73,12 @@ describe("isolate", () => {
 
   it.effect("isolated component's element returns the namespaced element", () =>
     Effect.gen(function* () {
-      let nsElement: Element | null = null
+      const nsElement = yield* Ref.make<Option.Option<Element>>(Option.none())
 
       const component = Effect.gen(function* () {
         const source = yield* DOMSource
-        nsElement = yield* source.element
+        const el = yield* source.element
+        yield* Ref.set(nsElement, Option.some(el))
       })
 
       yield* isolate(component, "counter").pipe(
@@ -85,8 +86,11 @@ describe("isolate", () => {
         Effect.provide(makeTestConfig("#app")),
       )
 
-      expect(nsElement).not.toBeNull()
-      expect((nsElement as unknown as Element).getAttribute("data-ns")).toBe("counter")
+      const result = yield* Ref.get(nsElement)
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isSome(result)) {
+        expect(result.value.getAttribute("data-ns")).toBe("counter")
+      }
     }),
   )
 })

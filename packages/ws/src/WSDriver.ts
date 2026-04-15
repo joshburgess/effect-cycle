@@ -15,29 +15,49 @@ const makeWSDriver = Effect.gen(function* () {
     }),
   )
 
-  const connected: Effect.Effect<void, WSError> = Effect.async((resume) => {
-    ws.onopen = () => {
-      resume(Effect.void)
+  const connected: Effect.Effect<void, WSError> = Effect.suspend(() => {
+    if (ws.readyState === WebSocket.OPEN) return Effect.void
+    if (ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) {
+      return Effect.fail(new WSError({ url: config.url }))
     }
-    ws.onerror = () => {
-      resume(Effect.fail(new WSError({ url: config.url })))
-    }
+    return Effect.async<void, WSError>((resume) => {
+      const onOpen = () => {
+        cleanup()
+        resume(Effect.void)
+      }
+      const onError = () => {
+        cleanup()
+        resume(Effect.fail(new WSError({ url: config.url })))
+      }
+      const cleanup = () => {
+        ws.removeEventListener("open", onOpen)
+        ws.removeEventListener("error", onError)
+      }
+      ws.addEventListener("open", onOpen)
+      ws.addEventListener("error", onError)
+    })
   })
 
   const messages: Stream.Stream<MessageEvent, WSError> = Stream.async<MessageEvent, WSError>(
     (emit) => {
-      ws.onmessage = (e) => {
-        void emit.single(e)
+      const onMessage = (e: Event) => {
+        void emit.single(e as MessageEvent)
       }
-      ws.onerror = () => {
+      const onError = () => {
         void emit.fail(new WSError({ url: config.url }))
       }
-      ws.onclose = () => {
+      const onClose = () => {
         void emit.end()
       }
 
+      ws.addEventListener("message", onMessage)
+      ws.addEventListener("error", onError)
+      ws.addEventListener("close", onClose)
+
       return Effect.sync(() => {
-        ws.onmessage = null
+        ws.removeEventListener("message", onMessage)
+        ws.removeEventListener("error", onError)
+        ws.removeEventListener("close", onClose)
       })
     },
   )

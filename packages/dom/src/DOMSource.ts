@@ -4,7 +4,7 @@ import type { DOMError } from "./errors.js"
 export class DOMSource extends Context.Tag("effect-cycle/DOMSource")<
   DOMSource,
   {
-    readonly select: (selector: string) => Stream.Stream<Event>
+    readonly select: (selector: string, eventType: string) => Stream.Stream<Event>
     readonly element: Effect.Effect<Element, DOMError>
   }
 >() {}

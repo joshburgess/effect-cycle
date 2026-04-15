@@ -26,7 +26,7 @@ describe("makeHotRuntime", () => {
     Effect.gen(function* () {
       const ref = yield* Ref.make(0)
       const layer = makeCounterLayer(ref)
-      const hot = makeHotRuntime(layer)
+      const hot = yield* makeHotRuntime(layer)
 
       // Use a Deferred to know when the forked fiber has finished
       const done = yield* Deferred.make<void>()
@@ -37,7 +37,7 @@ describe("makeHotRuntime", () => {
         yield* counter.increment
       }).pipe(Effect.ensuring(Deferred.succeed(done, undefined)))
 
-      yield* Effect.tryPromise(() => hot.run(app))
+      yield* hot.run(app)
 
       // Wait for the app to complete
       yield* Deferred.await(done)
@@ -45,7 +45,7 @@ describe("makeHotRuntime", () => {
       const count = yield* Ref.get(ref)
       expect(count).toBe(2)
 
-      yield* Effect.tryPromise(() => hot.dispose())
+      yield* hot.dispose
     }),
   )
 
@@ -57,7 +57,7 @@ describe("makeHotRuntime", () => {
     Effect.gen(function* () {
       const ref = yield* Ref.make(0)
       const layer = makeCounterLayer(ref)
-      const hot = makeHotRuntime(layer)
+      const hot = yield* makeHotRuntime(layer)
 
       // First app — sets ref to 10, then signals done
       const firstDone = yield* Deferred.make<void>()
@@ -76,18 +76,18 @@ describe("makeHotRuntime", () => {
         yield* counter.increment
       }).pipe(Effect.ensuring(Deferred.succeed(secondDone, undefined)))
 
-      yield* Effect.tryPromise(() => hot.run(firstApp))
+      yield* hot.run(firstApp)
       yield* Deferred.await(firstDone)
 
       // Restart with the second app
-      yield* Effect.tryPromise(() => hot.run(secondApp))
+      yield* hot.run(secondApp)
       yield* Deferred.await(secondDone)
 
       const count = yield* Ref.get(ref)
       // First app set it to 10, second app incremented 5 times → 15
       expect(count).toBe(15)
 
-      yield* Effect.tryPromise(() => hot.dispose())
+      yield* hot.dispose
     }),
   )
 
@@ -99,7 +99,7 @@ describe("makeHotRuntime", () => {
     Effect.gen(function* () {
       const ref = yield* Ref.make(0)
       const layer = makeCounterLayer(ref)
-      const hot = makeHotRuntime(layer)
+      const hot = yield* makeHotRuntime(layer)
 
       const done = yield* Deferred.make<void>()
 
@@ -108,13 +108,13 @@ describe("makeHotRuntime", () => {
         yield* counter.increment
       }).pipe(Effect.ensuring(Deferred.succeed(done, undefined)))
 
-      yield* Effect.tryPromise(() => hot.run(app))
+      yield* hot.run(app)
       yield* Deferred.await(done)
 
       // First dispose — should complete cleanly
-      yield* Effect.tryPromise(() => hot.dispose())
+      yield* hot.dispose
       // Second dispose — should not throw (no fiber, runtime already disposed)
-      yield* Effect.tryPromise(() => hot.dispose())
+      yield* hot.dispose
 
       // No assertion needed; the test passes if no exception is thrown
       expect(true).toBe(true)
@@ -130,7 +130,7 @@ describe("makeHotRuntime", () => {
       const ref = yield* Ref.make("initial")
       const layer = Layer.empty
 
-      const hot = makeHotRuntime(layer)
+      const hot = yield* makeHotRuntime(layer)
 
       // Signal that the long app has started before sleeping
       const longStarted = yield* Deferred.make<void>()
@@ -150,11 +150,11 @@ describe("makeHotRuntime", () => {
       }).pipe(Effect.ensuring(Deferred.succeed(shortDone, undefined)))
 
       // Start the long app and wait until it has actually started
-      yield* Effect.tryPromise(() => hot.run(longApp))
+      yield* hot.run(longApp)
       yield* Deferred.await(longStarted)
 
       // Restart — should interrupt the long app and run the short one
-      yield* Effect.tryPromise(() => hot.run(shortApp))
+      yield* hot.run(shortApp)
       yield* Deferred.await(shortDone)
 
       const result = yield* Ref.get(ref)
@@ -162,7 +162,7 @@ describe("makeHotRuntime", () => {
       // The short app ran and set "short-done"
       expect(result).toBe("short-done")
 
-      yield* Effect.tryPromise(() => hot.dispose())
+      yield* hot.dispose
     }),
   )
 })

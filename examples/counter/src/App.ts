@@ -27,9 +27,13 @@ const app = Effect.gen(function* () {
   // dom.select returns a Stream<Event> that emits every time a matching element is clicked.
   // Stream.tap lets us run a side effect (updating the Ref) for each emission,
   // passing the event downstream unchanged.
-  const inc$ = dom.select(".increment").pipe(Stream.tap(() => Ref.update(count, (n) => n + 1)))
+  const inc$ = dom
+    .select(".increment", "click")
+    .pipe(Stream.tap(() => Ref.update(count, (n) => n + 1)))
 
-  const dec$ = dom.select(".decrement").pipe(Stream.tap(() => Ref.update(count, (n) => n - 1)))
+  const dec$ = dom
+    .select(".decrement", "click")
+    .pipe(Stream.tap(() => Ref.update(count, (n) => n - 1)))
 
   // Stream.mergeAll fans-in both event streams into one.
   // After each interaction we read the current count and map it to HTML.

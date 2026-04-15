@@ -40,7 +40,7 @@ export const TodoItem = (
 
     // Toggle: flip the `done` flag for this specific todo id.
     const toggle$ = dom
-      .select(".toggle")
+      .select(".toggle", "click")
       .pipe(
         Stream.tap(() =>
           Ref.update(todos, (items) =>
@@ -51,7 +51,7 @@ export const TodoItem = (
 
     // Delete: remove this todo from the list entirely.
     const delete$ = dom
-      .select(".delete")
+      .select(".delete", "click")
       .pipe(Stream.tap(() => Ref.update(todos, (items) => items.filter((t) => t.id !== todo.id))))
 
     // Merge toggle and delete events, then re-read the list to find this item's

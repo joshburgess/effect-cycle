@@ -5,6 +5,6 @@ export const TestDOMSource = (
   events: Record<string, ReadonlyArray<Event>>,
 ): Layer.Layer<DOMSource> =>
   Layer.succeed(DOMSource, {
-    select: (sel: string) => Stream.fromIterable(events[sel] ?? []),
+    select: (sel: string, _eventType: string) => Stream.fromIterable(events[sel] ?? []),
     element: Effect.succeed(document.createElement("div")),
   })

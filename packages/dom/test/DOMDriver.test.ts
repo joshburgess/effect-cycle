@@ -21,7 +21,7 @@ describe("DOMDriverLive", () => {
 
         const clickReceived = yield* Effect.async<boolean>((resolve) => {
           let done = false
-          const stream = source.select(".btn")
+          const stream = source.select(".btn", "click")
 
           Stream.runForEach(stream, () =>
             Effect.sync(() => {

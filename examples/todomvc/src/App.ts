@@ -26,8 +26,6 @@ import { Effect, Queue, Ref, Stream } from "effect"
 import { DOMSink, DOMSource, isolate } from "effect-cycle-dom"
 import { type Todo, TodoItem } from "./TodoItem.js"
 
-let nextId = 1
-
 const app = Effect.gen(function* () {
   const dom = yield* DOMSource
   const sink = yield* DOMSink
@@ -35,6 +33,9 @@ const app = Effect.gen(function* () {
   // Shared mutable state for the entire todo list.
   // Both the parent and each isolated TodoItem hold a reference to this Ref.
   const todos = yield* Ref.make<ReadonlyArray<Todo>>([])
+
+  // Auto-incrementing ID counter managed as a Ref.
+  const nextId = yield* Ref.make(1)
 
   // Queue used by the DOM listener to hand off new todo text to the mounter fiber.
   const textQueue = yield* Queue.unbounded<string>()
@@ -46,18 +47,20 @@ const app = Effect.gen(function* () {
   // Fiber 1: DOM listener.
   // Reads the add-btn click stream and pushes the typed text into textQueue.
   // Runs independently of the render and mount fibers.
-  yield* dom.select(".add-btn").pipe(
-    Stream.map((event) => {
-      const form = (event.target as HTMLElement).closest("form") as HTMLFormElement | null
-      const input = form?.querySelector(".new-todo") as HTMLInputElement | null
-      const text = input?.value.trim() ?? ""
+  yield* dom.select(".add-btn", "click").pipe(
+    Stream.mapEffect((event) =>
+      Effect.sync(() => {
+        const form = (event.target as HTMLElement).closest("form") as HTMLFormElement | null
+        const input = form?.querySelector(".new-todo") as HTMLInputElement | null
+        const text = input?.value.trim() ?? ""
 
-      if (input !== null) {
-        input.value = ""
-      }
+        if (input !== null) {
+          input.value = ""
+        }
 
-      return text
-    }),
+        return text
+      }),
+    ),
     Stream.filter((text): text is string => text.length > 0),
     Stream.runForEach((text) => Queue.offer(textQueue, text)),
     Effect.fork,
@@ -70,7 +73,7 @@ const app = Effect.gen(function* () {
   yield* Stream.fromQueue(textQueue).pipe(
     Stream.runForEach((text) =>
       Effect.gen(function* () {
-        const id = nextId++
+        const id = yield* Ref.getAndUpdate(nextId, (n) => n + 1)
         const todo: Todo = { id, text, done: false }
 
         // Add to the shared list first so the shell re-render sees the new container.

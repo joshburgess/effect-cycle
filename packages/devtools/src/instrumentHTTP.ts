@@ -1,4 +1,4 @@
-import { Effect, Layer, Metric, Stream } from "effect"
+import { Effect, Function as F, Layer, Metric, Stream } from "effect"
 import { httpErrorCount, httpRequestCount, instrumentService } from "effect-cycle-core"
 import { HTTPSink, HTTPSource } from "effect-cycle-http"
 import { DevToolsConfig } from "./DevToolsConfig.js"
@@ -12,26 +12,22 @@ const instrumentHTTPSource: Layer.Layer<HTTPSource, never, HTTPSource | DevTools
     Effect.gen(function* () {
       const config = yield* DevToolsConfig
       return instrumentService(HTTPSource, {
-        response: (original) => (category) => {
-          let stream = original(category)
-          if (config.enableMetrics) {
-            stream = stream.pipe(
-              Stream.tap(() => Metric.increment(httpRequestCount)),
-              Stream.tapError(() => Metric.increment(httpErrorCount)),
-            )
-          }
-          if (config.logLevel !== "none") {
-            stream = stream.pipe(
-              Stream.tap((res) =>
-                Effect.log(`[HTTPSource] response("${category}") status: ${res.status}`),
-              ),
-            )
-          }
-          if (config.enableSpans) {
-            stream = stream.pipe(Stream.withSpan("http.source.response"))
-          }
-          return stream
-        },
+        response: (original) => (category) =>
+          original(category).pipe(
+            config.enableMetrics
+              ? (s) =>
+                  s.pipe(
+                    Stream.tap(() => Metric.increment(httpRequestCount)),
+                    Stream.tapError(() => Metric.increment(httpErrorCount)),
+                  )
+              : F.identity,
+            config.logLevel !== "none"
+              ? Stream.tap((res) =>
+                  Effect.log(`[HTTPSource] response("${category}") status: ${res.status}`),
+                )
+              : F.identity,
+            config.enableSpans ? Stream.withSpan("http.source.response") : F.identity,
+          ),
       })
     }),
   )
@@ -46,20 +42,17 @@ const instrumentHTTPSink: Layer.Layer<HTTPSink, never, HTTPSink | DevToolsConfig
       const config = yield* DevToolsConfig
       return instrumentService(HTTPSink, {
         request: (original) => (category, req$) => {
-          let stream = req$
-          if (config.enableMetrics) {
-            stream = stream.pipe(Stream.tap(() => Metric.increment(httpRequestCount)))
-          }
-          if (config.logLevel !== "none") {
-            stream = stream.pipe(
-              Stream.tap((req) => Effect.log(`[HTTPSink] request("${category}") url: ${req.url}`)),
-            )
-          }
-          const effect = original(category, stream)
-          if (config.enableSpans) {
-            return effect.pipe(Effect.withSpan("http.sink.request"))
-          }
-          return effect
+          const instrumented = req$.pipe(
+            config.enableMetrics
+              ? Stream.tap(() => Metric.increment(httpRequestCount))
+              : F.identity,
+            config.logLevel !== "none"
+              ? Stream.tap((req) => Effect.log(`[HTTPSink] request("${category}") url: ${req.url}`))
+              : F.identity,
+          )
+          return config.enableSpans
+            ? original(category, instrumented).pipe(Effect.withSpan("http.sink.request"))
+            : original(category, instrumented)
         },
       })
     }),

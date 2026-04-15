@@ -1,4 +1,4 @@
-import { Effect, Layer, Metric, Stream } from "effect"
+import { Effect, Function as F, Layer, Metric, Stream } from "effect"
 import { domEventCount, domRenderCount, instrumentService } from "effect-cycle-core"
 import { DOMSink, DOMSource } from "effect-cycle-dom"
 import { DevToolsConfig } from "./DevToolsConfig.js"
@@ -12,23 +12,18 @@ export const instrumentDOMSource: Layer.Layer<DOMSource, never, DOMSource | DevT
     Effect.gen(function* () {
       const config = yield* DevToolsConfig
       return instrumentService(DOMSource, {
-        select: (original) => (selector) => {
-          let stream = original(selector)
-          if (config.enableMetrics) {
-            stream = stream.pipe(Stream.tap(() => Metric.increment(domEventCount)))
-          }
-          if (config.logLevel !== "none") {
-            stream = stream.pipe(
-              Stream.tap((event) =>
-                Effect.log(`[DOMSource] select("${selector}") emitted: ${event.type}`),
-              ),
-            )
-          }
-          if (config.enableSpans) {
-            stream = stream.pipe(Stream.withSpan("dom.source.select"))
-          }
-          return stream
-        },
+        select: (original) => (selector, eventType) =>
+          original(selector, eventType).pipe(
+            config.enableMetrics ? Stream.tap(() => Metric.increment(domEventCount)) : F.identity,
+            config.logLevel !== "none"
+              ? Stream.tap((event) =>
+                  Effect.log(
+                    `[DOMSource] select("${selector}", "${eventType}") emitted: ${event.type}`,
+                  ),
+                )
+              : F.identity,
+            config.enableSpans ? Stream.withSpan("dom.source.select") : F.identity,
+          ),
       })
     }),
   )
@@ -43,18 +38,15 @@ export const instrumentDOMSink: Layer.Layer<DOMSink, never, DOMSink | DevToolsCo
       const config = yield* DevToolsConfig
       return instrumentService(DOMSink, {
         render: (original) => (vdom$) => {
-          let stream = vdom$
-          if (config.enableMetrics) {
-            stream = stream.pipe(Stream.tap(() => Metric.increment(domRenderCount)))
-          }
-          if (config.logLevel !== "none") {
-            stream = stream.pipe(Stream.tap(() => Effect.log("[DOMSink] render called")))
-          }
-          const effect = original(stream)
-          if (config.enableSpans) {
-            return effect.pipe(Effect.withSpan("dom.sink.render"))
-          }
-          return effect
+          const instrumented = vdom$.pipe(
+            config.enableMetrics ? Stream.tap(() => Metric.increment(domRenderCount)) : F.identity,
+            config.logLevel !== "none"
+              ? Stream.tap(() => Effect.log("[DOMSink] render called"))
+              : F.identity,
+          )
+          return config.enableSpans
+            ? original(instrumented).pipe(Effect.withSpan("dom.sink.render"))
+            : original(instrumented)
         },
       })
     }),

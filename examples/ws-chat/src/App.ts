@@ -40,22 +40,24 @@ const app = Effect.gen(function* () {
     Effect.fork,
   )
 
-  // dom.select(".send-btn") gives a Stream<Event> of click events on the send button.
-  // We map each click to the current value of the text input field.
-  const outgoing$ = dom.select(".send-btn").pipe(
-    Stream.map((event) => {
-      // Walk up from the button to the nearest form to find the input.
-      const form = (event.target as HTMLElement).closest("form") as HTMLFormElement | null
-      const input = form?.querySelector(".chat-input") as HTMLInputElement | null
-      const value = input?.value ?? ""
+  // dom.select(".send-btn", "click") gives a Stream<Event> of click events on the send button.
+  // We use mapEffect + Effect.sync to safely read DOM state.
+  const outgoing$ = dom.select(".send-btn", "click").pipe(
+    Stream.mapEffect((event) =>
+      Effect.sync(() => {
+        // Walk up from the button to the nearest form to find the input.
+        const form = (event.target as HTMLElement).closest("form") as HTMLFormElement | null
+        const input = form?.querySelector(".chat-input") as HTMLInputElement | null
+        const value = input?.value ?? ""
 
-      // Clear the input after reading so the field resets after sending.
-      if (input !== null) {
-        input.value = ""
-      }
+        // Clear the input after reading so the field resets after sending.
+        if (input !== null) {
+          input.value = ""
+        }
 
-      return value
-    }),
+        return value
+      }),
+    ),
     // Ignore empty sends.
     Stream.filter((msg) => msg.length > 0),
   )
