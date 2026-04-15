@@ -1,0 +1,40 @@
+{
+  "name": "effect-cycle-ws",
+  "version": "0.0.1",
+  "description": "WebSocket driver for effect-cycle",
+  "license": "MIT",
+  "author": "Josh Burgess",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "rm -rf dist && rollup -c rollup.config.mjs && tsc -p tsconfig.build.json && cp dist/index.d.ts dist/index.d.cts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "effect": "^3.14.0",
+    "effect-cycle-core": "workspace:^"
+  },
+  "devDependencies": {
+    "effect": "^3.14.0",
+    "effect-cycle-core": "workspace:*",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "example-http-search",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/platform": "^0.78.0",
+    "effect": "^3.14.0",
+    "effect-cycle-core": "workspace:*",
+    "effect-cycle-dom": "workspace:*",
+    "effect-cycle-http": "workspace:*"
+  }
+}

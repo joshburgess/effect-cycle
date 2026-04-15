@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "effect-cycle-core": ["./packages/core/src/index.ts"],
+      "effect-cycle-dom": ["./packages/dom/src/index.ts"],
+      "effect-cycle-http": ["./packages/http/src/index.ts"],
+      "effect-cycle-ws": ["./packages/ws/src/index.ts"],
+      "effect-cycle-testing": ["./packages/testing/src/index.ts"],
+      "effect-cycle-devtools": ["./packages/devtools/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/test/**/*.ts",
+    "examples/*/src/**/*.ts",
+    "examples/*/test/**/*.ts"
+  ]
+}

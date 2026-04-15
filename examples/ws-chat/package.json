@@ -1,0 +1,15 @@
+{
+  "name": "example-ws-chat",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "effect": "^3.14.0",
+    "effect-cycle-core": "workspace:*",
+    "effect-cycle-dom": "workspace:*",
+    "effect-cycle-ws": "workspace:*"
+  }
+}
