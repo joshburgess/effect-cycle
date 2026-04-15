@@ -86,6 +86,10 @@ importers:
       effect-cycle-dom:
         specifier: workspace:*
         version: link:../../packages/dom
+    devDependencies:
+      vite:
+        specifier: ^7.0.0
+        version: 7.3.2
 
   examples/ws-chat:
     dependencies:
