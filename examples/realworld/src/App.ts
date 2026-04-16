@@ -515,7 +515,7 @@ const handleAction = (
       return Effect.gen(function* () {
         yield* Ref.set(refs.user, null)
         yield* Effect.sync(() => localStorage.removeItem("conduit-token"))
-        yield* routerSink.push("/")
+        yield* routerSink.push("/").pipe(Effect.orDie)
       })
     }
 
@@ -723,7 +723,7 @@ const handleAction = (
             )
             const data = json as { article: Article }
             yield* Ref.set(refs.loading, false)
-            yield* routerSink.push(`/article/${data.article.slug}`)
+            yield* routerSink.push(`/article/${data.article.slug}`).pipe(Effect.orDie)
           }).pipe(
             Effect.catchAll((err) =>
               Effect.gen(function* () {
@@ -759,7 +759,7 @@ const handleAction = (
             )
             const data = json as { article: Article }
             yield* Ref.set(refs.loading, false)
-            yield* routerSink.push(`/article/${data.article.slug}`)
+            yield* routerSink.push(`/article/${data.article.slug}`).pipe(Effect.orDie)
           }).pipe(
             Effect.catchAll((err) =>
               Effect.gen(function* () {
@@ -783,7 +783,7 @@ const handleAction = (
               `/api/articles/${encodeURIComponent(action.slug)}`,
               token,
             )
-            yield* routerSink.push("/")
+            yield* routerSink.push("/").pipe(Effect.orDie)
           }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
         )
       })
@@ -871,7 +871,7 @@ const handleAction = (
         yield* Effect.sync(() => localStorage.setItem("conduit-token", action.user.token))
         const path = yield* Ref.get(refs.currentPath)
         if (path === "/login" || path === "/register") {
-          yield* routerSink.push("/")
+          yield* routerSink.push("/").pipe(Effect.orDie)
         }
       })
     }

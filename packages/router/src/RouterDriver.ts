@@ -12,6 +12,7 @@
  * since pushState/replaceState do not fire popstate on their own.
  */
 import { Context, Effect, Layer, Option, Queue, Stream } from "effect"
+import { RouterError } from "./errors.js"
 import { type RouteLocation, matchPath, parseQuery } from "./Location.js"
 import type { Navigation } from "./Navigation.js"
 import { RouterConfig } from "./RouterConfig.js"
@@ -84,39 +85,45 @@ export const RouterDriverLive: Layer.Layer<RouterSource | RouterSink, never, Rou
       )
 
       // Apply a navigation command to the browser
-      const applyNav = (nav: Navigation): Effect.Effect<void> =>
-        Effect.sync(() => {
-          switch (nav.type) {
-            case "push": {
-              if (config.mode === "hash") {
-                window.location.hash = `#${nav.path}`
-                // hashchange fires automatically, so the listener will push to the queue
-              } else {
-                history.pushState(null, "", config.base + nav.path)
-                // pushState does NOT fire popstate, so we push manually
-                onNav()
+      const applyNav = (nav: Navigation): Effect.Effect<void, RouterError> =>
+        Effect.try({
+          try: () => {
+            switch (nav.type) {
+              case "push": {
+                if (config.mode === "hash") {
+                  window.location.hash = `#${nav.path}`
+                  // hashchange fires automatically, so the listener will push to the queue
+                } else {
+                  history.pushState(null, "", config.base + nav.path)
+                  // pushState does NOT fire popstate, so we push manually
+                  onNav()
+                }
+                break
               }
-              break
-            }
-            case "replace": {
-              if (config.mode === "hash") {
-                // Replace hash without adding a history entry
-                const url = `${window.location.href.replace(/#.*$/, "")}#${nav.path}`
-                history.replaceState(null, "", url)
-                // replaceState doesn't fire hashchange, push manually
-                onNav()
-              } else {
-                history.replaceState(null, "", config.base + nav.path)
-                onNav()
+              case "replace": {
+                if (config.mode === "hash") {
+                  // Replace hash without adding a history entry
+                  const url = `${window.location.href.replace(/#.*$/, "")}#${nav.path}`
+                  history.replaceState(null, "", url)
+                  // replaceState doesn't fire hashchange, push manually
+                  onNav()
+                } else {
+                  history.replaceState(null, "", config.base + nav.path)
+                  onNav()
+                }
+                break
               }
-              break
+              case "go": {
+                history.go(nav.delta)
+                // popstate will fire after the navigation completes
+                break
+              }
             }
-            case "go": {
-              history.go(nav.delta)
-              // popstate will fire after the navigation completes
-              break
-            }
-          }
+          },
+          catch: (cause) =>
+            new RouterError({
+              message: `Navigation failed (${nav.type}): ${cause instanceof Error ? cause.message : String(cause)}`,
+            }),
         })
 
       // Build the location stream from the queue
@@ -141,7 +148,8 @@ export const RouterDriverLive: Layer.Layer<RouterSource | RouterSink, never, Rou
 
       // Sink implementation
       const sink: RouterSink["Type"] = {
-        navigate: (nav$) => Stream.runForEach(nav$, applyNav).pipe(Effect.fork, Effect.asVoid),
+        navigate: (nav$) =>
+          Stream.runForEach(nav$, applyNav).pipe(Effect.fork, Effect.asVoid),
 
         push: (path) => applyNav({ type: "push", path }),
 

@@ -62,6 +62,10 @@ importers:
       effect-cycle-dom:
         specifier: workspace:*
         version: link:../../packages/dom
+    devDependencies:
+      vite:
+        specifier: ^7.0.0
+        version: 7.3.2(@types/node@22.19.17)(jiti@2.6.1)(tsx@4.21.0)
 
   examples/http-search:
     dependencies:
@@ -80,6 +84,10 @@ importers:
       effect-cycle-http:
         specifier: workspace:*
         version: link:../../packages/http
+    devDependencies:
+      vite:
+        specifier: ^7.0.0
+        version: 7.3.2(@types/node@22.19.17)(jiti@2.6.1)(tsx@4.21.0)
 
   examples/realworld:
     dependencies:
@@ -155,6 +163,10 @@ importers:
       effect-cycle-ws:
         specifier: workspace:*
         version: link:../../packages/ws
+    devDependencies:
+      vite:
+        specifier: ^7.0.0
+        version: 7.3.2(@types/node@22.19.17)(jiti@2.6.1)(tsx@4.21.0)
 
   packages/core:
     devDependencies:
@@ -185,6 +197,9 @@ importers:
       effect-cycle-http:
         specifier: workspace:*
         version: link:../http
+      effect-cycle-router:
+        specifier: workspace:*
+        version: link:../router
       effect-cycle-testing:
         specifier: workspace:*
         version: link:../testing

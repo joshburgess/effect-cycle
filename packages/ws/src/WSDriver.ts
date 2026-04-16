@@ -1,4 +1,4 @@
-import { Effect, Layer, Stream } from "effect"
+import { Context, Effect, Layer, Stream } from "effect"
 import { WSConfig } from "./WSConfig.js"
 import { WSSink } from "./WSSink.js"
 import { WSSource } from "./WSSource.js"
@@ -81,12 +81,16 @@ const makeWSDriver = Effect.gen(function* () {
 /**
  * Live implementation of the WebSocket driver.
  *
- * Opens a WebSocket connection on layer construction and closes it
- * on scope finalization. Requires `WSConfig` for the URL and protocols.
+ * Opens a single WebSocket connection on layer construction and closes it
+ * on scope finalization. Both `WSSource` and `WSSink` share the same
+ * underlying socket. Requires `WSConfig` for the URL and protocols.
  *
  * @since 0.0.1
  */
-export const WSDriverLive: Layer.Layer<WSSource | WSSink, never, WSConfig> = Layer.scoped(
-  WSSource,
-  makeWSDriver.pipe(Effect.map(({ source }) => source)),
-).pipe(Layer.merge(Layer.scoped(WSSink, makeWSDriver.pipe(Effect.map(({ sink }) => sink)))))
+export const WSDriverLive: Layer.Layer<WSSource | WSSink, never, WSConfig> = Layer.scopedContext(
+  makeWSDriver.pipe(
+    Effect.map(({ source, sink }) =>
+      Context.make(WSSource, source).pipe(Context.add(WSSink, sink)),
+    ),
+  ),
+)

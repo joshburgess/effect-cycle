@@ -10,6 +10,7 @@ export {
   wsSendCount,
   domEventCount,
   domRenderCount,
+  routerNavCount,
   instrumentService,
 } from "./observability.js"
 export { run, makeManagedRuntime } from "./run.js"

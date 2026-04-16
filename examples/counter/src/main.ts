@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { Effect, Layer } from "effect"
 import { makeHotRuntime } from "effect-cycle-core"
 import { DOMConfigDefault, DOMDriverLive } from "effect-cycle-dom"

@@ -38,6 +38,9 @@ export const domEventCount = Metric.counter("effect_cycle.dom.events.total")
 /** Counter: total DOM renders */
 export const domRenderCount = Metric.counter("effect_cycle.dom.renders.total")
 
+/** Counter: total router navigations */
+export const routerNavCount = Metric.counter("effect_cycle.router.navigations.total")
+
 // -------------------------------------------------------------------------------------
 // instrumentService — generic service wrapper
 // -------------------------------------------------------------------------------------
