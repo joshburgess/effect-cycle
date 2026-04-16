@@ -10,7 +10,7 @@ import type { RouterError } from "./errors.js"
  * in the browser history. Navigation methods may fail with `RouterError`
  * if the browser rejects the operation (e.g. SecurityError).
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class RouterSink extends Context.Tag("effect-cycle/RouterSink")<
   RouterSink,

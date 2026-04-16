@@ -10,7 +10,7 @@ import type { App } from "effect-cycle-core"
  * @param layers - Test driver layers satisfying the app's requirements.
  * @returns A Promise that resolves when the app completes.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const runTest = <E, R>(app: App<void, E, R>, layers: Layer.Layer<R>): Promise<void> =>
   Effect.runPromise(app.pipe(Effect.provide(layers)))

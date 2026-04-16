@@ -20,7 +20,7 @@ export const run = <E, R>(
  *
  * Call `runtime.dispose()` for full shutdown.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const makeManagedRuntime = <R>(
   drivers: Layer.Layer<R>,

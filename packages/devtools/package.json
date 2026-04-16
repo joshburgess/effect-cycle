@@ -1,6 +1,6 @@
 {
   "name": "effect-cycle-devtools",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "DevTools instrumentation for effect-cycle drivers",
   "license": "MIT",
   "author": "Josh Burgess",

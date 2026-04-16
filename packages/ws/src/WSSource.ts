@@ -7,7 +7,7 @@ import type { WSError } from "./errors.js"
  * Provides a stream of incoming messages and an effect to await
  * the connection handshake.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class WSSource extends Context.Tag("effect-cycle/WSSource")<
   WSSource,

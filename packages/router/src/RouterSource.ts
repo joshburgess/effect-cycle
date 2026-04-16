@@ -8,7 +8,7 @@ import type { RouteLocation } from "./Location.js"
  * Provides a stream of route locations and pattern-matching helpers.
  * Emits the initial location immediately, then on every navigation event.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class RouterSource extends Context.Tag("effect-cycle/RouterSource")<
   RouterSource,

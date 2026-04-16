@@ -8,7 +8,7 @@ import type { VNode } from "effect-cycle-dom"
  * Returns an Effect that provides both the layer and the `rendered` Ref
  * for assertion.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const TestDOMSink = (): Effect.Effect<{
   readonly layer: Layer.Layer<DOMSink>

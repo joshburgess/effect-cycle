@@ -3,7 +3,7 @@ import { Data } from "effect"
 /**
  * Error raised by the DOM driver when a required element cannot be found.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class DOMError extends Data.TaggedError("DOMError")<{
   /** The CSS selector that failed to match. */

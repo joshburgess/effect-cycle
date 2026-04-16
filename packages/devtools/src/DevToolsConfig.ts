@@ -3,7 +3,7 @@ import { Context, Layer } from "effect"
 /**
  * Configuration for the DevTools instrumentation layer.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class DevToolsConfig extends Context.Tag("effect-cycle/DevToolsConfig")<
   DevToolsConfig,
@@ -20,7 +20,7 @@ export class DevToolsConfig extends Context.Tag("effect-cycle/DevToolsConfig")<
 /**
  * Default DevTools configuration: info logging, metrics and spans enabled.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const DevToolsConfigDefault = Layer.succeed(DevToolsConfig, {
   logLevel: "info",

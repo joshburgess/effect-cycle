@@ -5,7 +5,7 @@ import { HTTPSink } from "effect-cycle-http"
 /**
  * A captured HTTP request with its category.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export interface CapturedRequest {
   readonly category: string
@@ -18,7 +18,7 @@ export interface CapturedRequest {
  * Returns an Effect that provides both the layer and the `captured` Ref
  * for assertion.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const TestHTTPSink = (): Effect.Effect<{
   readonly layer: Layer.Layer<HTTPSink>

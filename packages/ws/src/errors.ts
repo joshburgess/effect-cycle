@@ -3,7 +3,7 @@ import { Data } from "effect"
 /**
  * Error raised by the WebSocket driver on connection failure or disconnect.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class WSError extends Data.TaggedError("WSError")<{
   /** The WebSocket URL that failed. */

@@ -7,7 +7,7 @@ import type { DOMError } from "./errors.js"
  * Provides streams of DOM events scoped to the driver's root element.
  * Yield this tag inside `Effect.gen` to access the DOM.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class DOMSource extends Context.Tag("effect-cycle/DOMSource")<
   DOMSource,

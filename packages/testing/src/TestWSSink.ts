@@ -7,7 +7,7 @@ import { WSSink } from "effect-cycle-ws"
  * Returns an Effect that provides both the layer and the `captured` Ref
  * for assertion.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const TestWSSink = (): Effect.Effect<{
   readonly layer: Layer.Layer<WSSink>

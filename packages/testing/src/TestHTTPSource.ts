@@ -8,7 +8,7 @@ import { HTTPSource } from "effect-cycle-http"
  * @param responses - A record mapping category strings to arrays of responses.
  * @returns A `Layer` providing `HTTPSource` with the scripted responses.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const TestHTTPSource = (
   responses: Record<string, ReadonlyArray<HttpClientResponse.HttpClientResponse>>,

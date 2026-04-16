@@ -3,7 +3,7 @@ import { Context } from "effect"
 /**
  * Configuration for the WebSocket driver.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class WSConfig extends Context.Tag("effect-cycle/WSConfig")<
   WSConfig,

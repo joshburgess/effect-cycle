@@ -9,7 +9,7 @@ import { WSSource } from "effect-cycle-ws"
  * @param events - An array of `MessageEvent` values to emit.
  * @returns A `Layer` providing `WSSource` with the scripted events.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const TestWSSource = (events: ReadonlyArray<MessageEvent>): Layer.Layer<WSSource> =>
   Layer.succeed(WSSource, {

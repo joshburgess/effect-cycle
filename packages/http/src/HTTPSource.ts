@@ -9,7 +9,7 @@ import type { HTTPError } from "./errors.js"
  * Provides streams of HTTP responses grouped by category. Responses
  * are routed here by the HTTP driver when requests are sent via `HTTPSink`.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class HTTPSource extends Context.Tag("effect-cycle/HTTPSource")<
   HTTPSource,

@@ -85,7 +85,7 @@ const makeWSDriver = Effect.gen(function* () {
  * on scope finalization. Both `WSSource` and `WSSink` share the same
  * underlying socket. Requires `WSConfig` for the URL and protocols.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const WSDriverLive: Layer.Layer<WSSource | WSSink, never, WSConfig> = Layer.scopedContext(
   makeWSDriver.pipe(

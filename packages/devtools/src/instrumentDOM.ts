@@ -10,7 +10,7 @@ import { DevToolsConfig } from "./DevToolsConfig.js"
 /**
  * Wraps `DOMSource.select` with metrics, logging, and span instrumentation.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const instrumentDOMSource: Layer.Layer<DOMSource, never, DOMSource | DevToolsConfig> =
   Layer.unwrapEffect(
@@ -40,7 +40,7 @@ export const instrumentDOMSource: Layer.Layer<DOMSource, never, DOMSource | DevT
 /**
  * Wraps `DOMSink.render` with metrics, logging, and span instrumentation.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const instrumentDOMSink: Layer.Layer<DOMSink, never, DOMSink | DevToolsConfig> =
   Layer.unwrapEffect(
@@ -69,7 +69,7 @@ export const instrumentDOMSink: Layer.Layer<DOMSink, never, DOMSink | DevToolsCo
 /**
  * Convenience layer that instruments both `DOMSource` and `DOMSink`.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const instrumentDOM: Layer.Layer<
   DOMSource | DOMSink,

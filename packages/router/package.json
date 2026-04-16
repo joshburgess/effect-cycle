@@ -1,6 +1,6 @@
 {
   "name": "effect-cycle-router",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Router driver for effect-cycle",
   "license": "MIT",
   "author": "Josh Burgess",

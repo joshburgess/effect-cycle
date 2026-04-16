@@ -7,7 +7,7 @@ import type { VNode } from "./VNode.js"
  * Accepts a stream of `VNode` values and patches them into the DOM
  * using morphdom for efficient updates.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class DOMSink extends Context.Tag("effect-cycle/DOMSink")<
   DOMSink,

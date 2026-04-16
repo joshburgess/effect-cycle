@@ -6,7 +6,7 @@ import { Data } from "effect"
  * Typically surfaced during `Layer` construction when the underlying
  * resource (DOM element, WebSocket connection, etc.) cannot be acquired.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class DriverInitError extends Data.TaggedError("DriverInitError")<{
   /** The driver name (e.g. "DOMDriver", "WSDriver"). */

@@ -15,7 +15,7 @@ import { instrumentWS } from "./instrumentWS.js"
  * Wraps existing driver services with logging, metrics, and spans
  * based on `DevToolsConfig`.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const DevToolsLayer: Layer.Layer<
   DOMSource | DOMSink | HTTPSource | HTTPSink | WSSource | WSSink | RouterSource | RouterSink,

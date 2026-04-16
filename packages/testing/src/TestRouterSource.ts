@@ -12,7 +12,7 @@ import { RouterSource, matchPath } from "effect-cycle-router"
  * @param locations - An array of `RouteLocation` values to emit.
  * @returns A `Layer` providing `RouterSource` with the scripted locations.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const TestRouterSource = (
   locations: ReadonlyArray<RouteLocation>,

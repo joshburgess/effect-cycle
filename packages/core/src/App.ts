@@ -24,6 +24,6 @@ import type { Effect } from "effect"
  * })
  * ```
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export type App<A = void, E = never, R = never> = Effect.Effect<A, E, R>

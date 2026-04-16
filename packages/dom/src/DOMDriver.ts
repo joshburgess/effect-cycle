@@ -17,7 +17,7 @@ import { DOMError } from "./errors.js"
  *
  * Requires `DOMConfig` to locate the root element.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const DOMDriverLive: Layer.Layer<DOMSource | DOMSink, DOMError, DOMConfig> =
   Layer.scopedContext(

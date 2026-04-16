@@ -5,7 +5,7 @@ import { Context, type Effect, type Stream } from "effect"
  *
  * Accepts a stream of outgoing messages and writes each one to the socket.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class WSSink extends Context.Tag("effect-cycle/WSSink")<
   WSSink,

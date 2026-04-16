@@ -9,7 +9,7 @@ import type { Effect, Stream } from "effect"
  * is executed by the underlying `HttpClient` and the response is
  * routed to `HTTPSource.response(category)`.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export class HTTPSink extends Context.Tag("effect-cycle/HTTPSink")<
   HTTPSink,

@@ -9,7 +9,7 @@ import { RouterSink } from "effect-cycle-router"
  * for assertion. Each `push`, `replace`, or `navigate` stream element is
  * recorded as a `Navigation` value.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const TestRouterSink = (): Effect.Effect<{
   readonly layer: Layer.Layer<RouterSink>

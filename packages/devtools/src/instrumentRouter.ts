@@ -10,7 +10,7 @@ import { DevToolsConfig } from "./DevToolsConfig.js"
 /**
  * Wraps `RouterSource.location$` with metrics, logging, and span instrumentation.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const instrumentRouterSource: Layer.Layer<
   RouterSource,
@@ -39,7 +39,7 @@ export const instrumentRouterSource: Layer.Layer<
 /**
  * Wraps `RouterSink.push` and `RouterSink.replace` with logging and span instrumentation.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const instrumentRouterSink: Layer.Layer<RouterSink, never, RouterSink | DevToolsConfig> =
   Layer.unwrapEffect(
@@ -73,7 +73,7 @@ export const instrumentRouterSink: Layer.Layer<RouterSink, never, RouterSink | D
 /**
  * Convenience layer that instruments both `RouterSource` and `RouterSink`.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const instrumentRouter: Layer.Layer<
   RouterSource | RouterSink,

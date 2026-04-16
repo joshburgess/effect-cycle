@@ -16,7 +16,7 @@ import { HTTPError } from "./errors.js"
  *
  * Requires `HttpClient.HttpClient` from `@effect/platform`.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const HTTPDriverLive: Layer.Layer<HTTPSource | HTTPSink, never, HttpClient.HttpClient> =
   Layer.scopedContext(

@@ -5,7 +5,7 @@
  * - `replace` replaces the current history entry.
  * - `go` navigates forward or backward by `delta` entries.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export type Navigation =
   | { readonly type: "push"; readonly path: string }

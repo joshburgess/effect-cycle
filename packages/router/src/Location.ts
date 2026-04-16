@@ -7,7 +7,7 @@
 /**
  * Represents a parsed route location.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export interface RouteLocation {
   /** The full path (without hash prefix or base). e.g. "/articles/my-slug" */
@@ -40,7 +40,7 @@ export interface RouteLocation {
  * // => undefined
  * ```
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const matchPath = (pattern: string, path: string): Record<string, string> | undefined => {
   const patternParts = pattern.split("/").filter((s) => s.length > 0)
@@ -72,7 +72,7 @@ export const matchPath = (pattern: string, path: string): Record<string, string>
  * @param search - The query string to parse.
  * @returns A record of decoded key-value pairs.
  *
- * @since 0.0.1
+ * @since 0.1.0
  */
 export const parseQuery = (search: string): Record<string, string> => {
   const result: Record<string, string> = {}
