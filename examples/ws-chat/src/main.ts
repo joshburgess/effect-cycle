@@ -2,33 +2,38 @@
  * Entrypoint for the ws-chat example.
  *
  * Layer composition:
- *   - DOMConfigDefault   → provides DOMConfig { rootSelector: "#app" }
- *   - DOMDriverLive      → requires DOMConfig, provides DOMSource + DOMSink
- *   - WSConfig layer     → provides WSConfig { url: "ws://localhost:8080" }
- *   - WSDriverLive       → requires WSConfig, provides WSSource + WSSink
+ *   - DOMConfigDefault   -> provides DOMConfig { rootSelector: "#app" }
+ *   - DOMDriverLive      -> requires DOMConfig, provides DOMSource + DOMSink
+ *   - WSConfigFromEnv    -> reads WS_URL (required) and WS_PROTOCOLS (optional)
+ *                           from ConfigProvider, provides WSConfig
+ *   - WSDriverLive       -> requires WSConfig, provides WSSource + WSSink
  *
- * In a real app the WebSocket URL would come from an environment variable
- * or configuration file; here we supply it inline with Layer.succeed.
+ * Set WS_URL in the environment or ConfigProvider. Falls back to a default
+ * for local development when the env var is not set.
  */
-import { Layer } from "effect"
+import { ConfigProvider, Layer } from "effect"
 import { run } from "effect-cycle-core"
 import { DOMConfigDefault, DOMDriverLive } from "effect-cycle-dom"
-import { WSConfig, WSDriverLive } from "effect-cycle-ws"
+import { WSConfigFromEnv, WSDriverLive } from "effect-cycle-ws"
 import app from "./App.js"
 
-// Layer.succeed constructs a layer that directly provides a service value
-// without any initialization effects.  Ideal for plain configuration objects.
-const wsConfig = Layer.succeed(WSConfig, { url: "ws://localhost:8080" })
+// Provide a default WS_URL for local development. In production, set the
+// WS_URL environment variable or supply a ConfigProvider with the real URL.
+const devDefaults = ConfigProvider.fromMap(
+  new Map([["WS_URL", "ws://localhost:8080"]]),
+)
 
-// Provide the config layer to the WebSocket driver.
+// WSConfigFromEnv reads WS_URL and WS_PROTOCOLS from the ConfigProvider.
+// Layer.setConfigProvider merges our dev defaults underneath the process env.
+const wsConfig = WSConfigFromEnv.pipe(
+  Layer.provide(Layer.setConfigProvider(
+    ConfigProvider.orElse(ConfigProvider.fromEnv(), () => devDefaults),
+  )),
+)
+
 const wsDrivers = WSDriverLive.pipe(Layer.provide(wsConfig))
-
-// Provide the config layer to the DOM driver.
-// Layer.orDie converts initialization errors (e.g. missing "#app" element)
-// into defects — these are fatal configuration mistakes, not recoverable errors.
 const domDrivers = DOMDriverLive.pipe(Layer.provide(DOMConfigDefault), Layer.orDie)
 
-// Merge the two independent driver layers into one.
 const drivers = Layer.merge(domDrivers, wsDrivers)
 
 run(app, drivers)

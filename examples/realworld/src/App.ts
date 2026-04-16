@@ -14,7 +14,7 @@ import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import { Effect, Queue, Ref, type Scope, Stream } from "effect"
 import * as HttpClient from "@effect/platform/HttpClient"
 import { DOMSink, DOMSource } from "effect-cycle-dom"
-import { RouterSink, RouterSource } from "effect-cycle-router"
+import { matchPath, RouterSink, RouterSource } from "effect-cycle-router"
 
 // ---------------------------------------------------------------------------
 // Domain types
@@ -338,6 +338,10 @@ const handleAction = (
         const token = yield* getToken()
         const path = action.path
 
+        // Use matchPath for routes with named parameters
+        const articleMatch = matchPath("/article/:slug", path)
+        const editorMatch = matchPath("/editor/:slug", path)
+
         if (path === "/" || path === "") {
           yield* Ref.set(refs.feedType, "global")
           yield* Ref.set(refs.activeTag, null)
@@ -362,32 +366,29 @@ const handleAction = (
               yield* Queue.offer(actions, { type: "tags-loaded", tags: data.tags })
             }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
           )
-        } else if (path.startsWith("/editor/")) {
-          // Editing an existing article
-          const slug = path.slice("/editor/".length)
-          if (slug) {
-            yield* forkApi(
-              Effect.gen(function* () {
-                const json = yield* apiGet(
-                  client,
-                  `/api/articles/${encodeURIComponent(slug)}`,
-                  token,
-                )
-                const data = json as { article: Article }
-                yield* Ref.set(refs.editingArticle, data.article)
-                yield* Ref.set(refs.loading, false)
-              }).pipe(
-                Effect.catchAll((err) => handleApiError(err, refs, actions, "Failed to load article")),
-                Effect.asVoid,
-              ),
-            )
-          } else {
-            yield* Ref.set(refs.loading, false)
-          }
+        } else if (editorMatch) {
+          // Editing an existing article -- slug extracted by matchPath
+          const slug = editorMatch["slug"]!
+          yield* forkApi(
+            Effect.gen(function* () {
+              const json = yield* apiGet(
+                client,
+                `/api/articles/${encodeURIComponent(slug)}`,
+                token,
+              )
+              const data = json as { article: Article }
+              yield* Ref.set(refs.editingArticle, data.article)
+              yield* Ref.set(refs.loading, false)
+            }).pipe(
+              Effect.catchAll((err) => handleApiError(err, refs, actions, "Failed to load article")),
+              Effect.asVoid,
+            ),
+          )
         } else if (path === "/editor") {
           yield* Ref.set(refs.loading, false)
-        } else if (path.startsWith("/article/")) {
-          const slug = path.slice("/article/".length)
+        } else if (articleMatch) {
+          // View article -- slug extracted by matchPath
+          const slug = articleMatch["slug"]!
           yield* forkApi(
             Effect.gen(function* () {
               const json = yield* apiGet(
@@ -414,6 +415,7 @@ const handleAction = (
             }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
           )
         } else if (path.startsWith("/@")) {
+          // Profile routes use @ prefix which doesn't fit matchPath's :param syntax
           const rest = path.slice(2)
           const isFavorites = rest.endsWith("/favorites")
           const username = isFavorites ? rest.slice(0, -"/favorites".length) : rest
