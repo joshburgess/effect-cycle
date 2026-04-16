@@ -1,0 +1,23 @@
+{
+  "name": "example-realworld",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/platform": "^0.78.0",
+    "effect": "^3.14.0",
+    "effect-cycle-core": "workspace:*",
+    "effect-cycle-dom": "workspace:*",
+    "effect-cycle-http": "workspace:*",
+    "effect-cycle-router": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0"
+  }
+}

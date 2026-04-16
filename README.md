@@ -12,6 +12,7 @@ Your app is a pure function from **sources** (inputs) to **sinks** (outputs). Al
 | `effect-cycle-dom` | DOM driver — `DOMSource`, `DOMSink`, morphdom-based rendering, component isolation |
 | `effect-cycle-http` | HTTP driver — PubSub-based request routing, `@effect/platform` HttpClient, Schema validation |
 | `effect-cycle-ws` | WebSocket driver — lifecycle-managed connections with `Layer.scoped` |
+| `effect-cycle-router` | Router driver — hash or history-based routing with `RouterSource`/`RouterSink` |
 | `effect-cycle-testing` | Test doubles for every driver — `TestDOMSource`, `TestHTTPSink`, etc. |
 | `effect-cycle-devtools` | Observability layer — metrics, spans, and logging for all drivers |
 
@@ -26,10 +27,10 @@ const app = Effect.gen(function* () {
   const sink = yield* DOMSink
   const count = yield* Ref.make(0)
 
-  const inc$ = dom.select(".increment").pipe(
+  const inc$ = dom.select(".increment", "click").pipe(
     Stream.tap(() => Ref.update(count, (n) => n + 1)),
   )
-  const dec$ = dom.select(".decrement").pipe(
+  const dec$ = dom.select(".decrement", "click").pipe(
     Stream.tap(() => Ref.update(count, (n) => n - 1)),
   )
 
@@ -144,6 +145,28 @@ const app = Effect.gen(function* () {
 })
 ```
 
+## Router Driver
+
+Hash-based or history-based routing with typed location streams:
+
+```typescript
+import { Effect, Stream } from "effect"
+import { RouterSource, RouterSink } from "effect-cycle-router"
+
+const app = Effect.gen(function* () {
+  const router = yield* RouterSource
+  const nav = yield* RouterSink
+
+  // location$ emits { path, query, hash } on every navigation
+  yield* Stream.runForEach(router.location$, (loc) =>
+    Effect.log(`navigated to: ${loc.path}`),
+  )
+
+  // programmatic navigation
+  yield* nav.push("/settings")
+})
+```
+
 ## Component Isolation
 
 The DOM driver provides `isolate` to scope a component to a `[data-ns]` subtree:
@@ -215,27 +238,77 @@ import { WSConfigFromEnv } from "effect-cycle-ws"
 
 Working examples live in `examples/`:
 
-- **counter** — minimal DOM interaction (increment/decrement)
-- **http-search** — debounced search with the HTTP driver
-- **ws-chat** — WebSocket chat with lifecycle management
-- **todomvc** — component isolation with `isolate`, `Ref`-based shared state, forked child components
+- **counter** -- minimal DOM interaction (increment/decrement), with Vite HMR
+- **http-search** -- debounced search with the HTTP driver
+- **ws-chat** -- WebSocket chat with lifecycle management
+- **todomvc** -- component isolation with `isolate`, `Ref`-based shared state, forked child components
+- **realworld** -- full [RealWorld](https://github.com/gothinkster/realworld) (Conduit) SPA with routing, auth, CRUD, pagination
+- **realworld-api** -- mock API server for the RealWorld example
+
+Run any example:
+
+```bash
+cd examples/counter
+pnpm dev
+```
 
 ## Architecture
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed walkthrough of the Layer architecture, driver pattern, error handling, and testing approach.
-
-See [EFFECT_CYCLE.md](EFFECT_CYCLE.md) for the original design document.
+See [EFFECT_CYCLE.md](EFFECT_CYCLE.md) for the full design document covering the Layer architecture, driver pattern, error handling, and testing approach.
 
 ## Development
 
+### Prerequisites
+
+- Node.js >= 22
+- pnpm >= 9
+
+### Setup
+
 ```bash
+git clone <repo-url>
+cd effect-cycle
 pnpm install
-pnpm typecheck   # tsc --noEmit across all packages
-pnpm test         # vitest across all packages
-pnpm build        # rollup + tsc for each package (dual ESM+CJS)
-pnpm lint         # biome check
-pnpm lint:fix     # biome check --write
 ```
+
+### Commands
+
+```bash
+pnpm build       # Rollup + tsc for each package (dual ESM+CJS)
+pnpm test        # Vitest across all packages
+pnpm typecheck   # tsc --noEmit across all packages
+pnpm lint        # Biome lint + format check
+pnpm lint:fix    # Auto-fix lint issues
+```
+
+### Project Structure
+
+```
+packages/
+  core/       Core types, run, HMR, observability
+  dom/        DOM driver (source, sink, morphdom, isolation)
+  http/       HTTP driver (queue-based routing)
+  ws/         WebSocket driver (managed lifecycle)
+  router/     Router driver (hash/history routing)
+  testing/    Test utilities and helpers
+  devtools/   DevTools instrumentation
+
+examples/
+  counter/        Minimal counter
+  http-search/    HTTP search with debounce
+  ws-chat/        WebSocket chat
+  todomvc/        TodoMVC with isolation
+  realworld/      Full Conduit SPA
+  realworld-api/  Mock API server
+```
+
+### Tooling
+
+- **Biome** for linting and formatting (not ESLint/Prettier)
+- **Rollup + SWC** for bundling
+- **tsc** for declaration files only (`emitDeclarationOnly`)
+- **Vitest** with `@effect/vitest` for testing
+- **Dual ESM + CJS** output for all packages
 
 ## License
 
