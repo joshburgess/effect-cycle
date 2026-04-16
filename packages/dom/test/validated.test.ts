@@ -19,8 +19,7 @@ type FormData = typeof FormDataSchema.Type
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeCustomEvent = (detail: unknown): Event =>
-  new CustomEvent("submit", { detail })
+const makeCustomEvent = (detail: unknown): Event => new CustomEvent("submit", { detail })
 
 const extractDetail = (event: Event): unknown => (event as CustomEvent).detail
 
@@ -111,9 +110,7 @@ describe("validatedEvent", () => {
         return undefined
       }
 
-      const PayloadSchema = Schema.parseJson(
-        Schema.Struct({ id: Schema.Number }),
-      )
+      const PayloadSchema = Schema.parseJson(Schema.Struct({ id: Schema.Number }))
 
       const button = document.createElement("button")
       button.dataset["payload"] = JSON.stringify({ id: 7 })

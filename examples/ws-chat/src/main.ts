@@ -19,16 +19,14 @@ import app from "./App.js"
 
 // Provide a default WS_URL for local development. In production, set the
 // WS_URL environment variable or supply a ConfigProvider with the real URL.
-const devDefaults = ConfigProvider.fromMap(
-  new Map([["WS_URL", "ws://localhost:8080"]]),
-)
+const devDefaults = ConfigProvider.fromMap(new Map([["WS_URL", "ws://localhost:8080"]]))
 
 // WSConfigFromEnv reads WS_URL and WS_PROTOCOLS from the ConfigProvider.
 // Layer.setConfigProvider merges our dev defaults underneath the process env.
 const wsConfig = WSConfigFromEnv.pipe(
-  Layer.provide(Layer.setConfigProvider(
-    ConfigProvider.orElse(ConfigProvider.fromEnv(), () => devDefaults),
-  )),
+  Layer.provide(
+    Layer.setConfigProvider(ConfigProvider.orElse(ConfigProvider.fromEnv(), () => devDefaults)),
+  ),
 )
 
 const wsDrivers = WSDriverLive.pipe(Layer.provide(wsConfig))

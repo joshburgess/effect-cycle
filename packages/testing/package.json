@@ -34,6 +34,7 @@
     "effect-cycle-core": "workspace:^",
     "effect-cycle-dom": "workspace:^",
     "effect-cycle-http": "workspace:^",
+    "effect-cycle-router": "workspace:^",
     "effect-cycle-ws": "workspace:^"
   },
   "devDependencies": {
@@ -43,6 +44,7 @@
     "effect-cycle-core": "workspace:*",
     "effect-cycle-dom": "workspace:*",
     "effect-cycle-http": "workspace:*",
+    "effect-cycle-router": "workspace:*",
     "effect-cycle-ws": "workspace:*",
     "typescript": "^5.7.2"
   }

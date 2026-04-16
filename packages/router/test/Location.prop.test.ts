@@ -2,8 +2,8 @@
  * Property-based tests for matchPath and parseQuery using fast-check.
  */
 import { describe, expect, it } from "@effect/vitest"
-import * as fc from "fast-check"
 import { matchPath, parseQuery } from "effect-cycle-router"
+import * as fc from "fast-check"
 
 // ---------------------------------------------------------------------------
 // Arbitraries (fast-check v4 API)

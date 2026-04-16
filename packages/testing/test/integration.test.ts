@@ -1,3 +1,6 @@
+import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
+import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
+import * as HttpIncomingMessage from "@effect/platform/HttpIncomingMessage"
 /**
  * Integration tests that compose test drivers to run real app flows end-to-end.
  *
@@ -6,13 +9,9 @@
  */
 // @vitest-environment jsdom
 import { describe, expect, it } from "@effect/vitest"
-import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
-import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
-import * as HttpIncomingMessage from "@effect/platform/HttpIncomingMessage"
 import { Chunk, Effect, Layer, Ref, Stream } from "effect"
 import { DOMSink, DOMSource } from "effect-cycle-dom"
 import { HTTPSink, HTTPSource } from "effect-cycle-http"
-import { WSSink, WSSource } from "effect-cycle-ws"
 import {
   TestDOMSink,
   TestDOMSource,
@@ -21,6 +20,7 @@ import {
   TestWSSink,
   TestWSSource,
 } from "effect-cycle-testing"
+import { WSSink, WSSource } from "effect-cycle-ws"
 
 // ---------------------------------------------------------------------------
 // Counter app (inline, matching examples/counter/src/App.ts structure)
@@ -80,9 +80,7 @@ const wsChatApp = Effect.gen(function* () {
   yield* ws.connected
 
   yield* ws.messages.pipe(
-    Stream.mapEffect((event) =>
-      Ref.update(messages, (msgs) => [...msgs, event.data as string]),
-    ),
+    Stream.mapEffect((event) => Ref.update(messages, (msgs) => [...msgs, event.data as string])),
     Stream.runDrain,
     Effect.fork,
   )

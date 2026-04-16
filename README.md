@@ -10,7 +10,7 @@ Your app is a pure function from **sources** (inputs) to **sinks** (outputs). Al
 |---|---|
 | `effect-cycle-core` | `App` type, `run`, `makeManagedRuntime`, `HotRuntime`, observability primitives |
 | `effect-cycle-dom` | DOM driver — `DOMSource`, `DOMSink`, morphdom-based rendering, component isolation |
-| `effect-cycle-http` | HTTP driver — PubSub-based request routing, `@effect/platform` HttpClient, Schema validation |
+| `effect-cycle-http` | HTTP driver — adapter-based request routing, `@effect/platform` HttpClient, Schema validation |
 | `effect-cycle-ws` | WebSocket driver — lifecycle-managed connections with `Layer.scoped` |
 | `effect-cycle-router` | Router driver — hash or history-based routing with `RouterSource`/`RouterSink` |
 | `effect-cycle-testing` | Test doubles for every driver — `TestDOMSource`, `TestHTTPSink`, etc. |
@@ -90,7 +90,7 @@ describe("counter", () => {
 
 ## HTTP Driver
 
-Requests flow through a category-tagged PubSub. Send requests on the sink side, read responses on the source side:
+Requests flow through a category-tagged adapter. Send requests on the sink side, read responses on the source side:
 
 ```typescript
 import { Effect, Stream } from "effect"
@@ -191,16 +191,18 @@ yield* isolate(TodoItem(todo), `todo-${todo.id}`).pipe(Effect.fork)
 `HotRuntime` manages a single running fiber that can be interrupted and restarted with new app code while keeping driver layers alive:
 
 ```typescript
+import { Effect } from "effect"
 import { makeHotRuntime } from "effect-cycle-core"
 
-const hot = makeHotRuntime(drivers)
-await hot.run(app)
+const runtime = Effect.runSync(makeHotRuntime(drivers))
+
+Effect.runSync(runtime.run(app))
 
 // On HMR update:
-await hot.run(updatedApp) // interrupts previous fiber, starts new one
+Effect.runSync(runtime.run(updatedApp)) // interrupts previous fiber, starts new one
 
 // On shutdown:
-await hot.dispose()
+Effect.runSync(runtime.dispose)
 ```
 
 ## DevTools
@@ -252,6 +254,10 @@ cd examples/counter
 pnpm dev
 ```
 
+> The `realworld` example needs the mock API server running first:
+> `cd examples/realworld-api && pnpm dev`, then in another terminal
+> `cd examples/realworld && pnpm dev`.
+
 ## Architecture
 
 See [EFFECT_CYCLE.md](EFFECT_CYCLE.md) for the full design document covering the Layer architecture, driver pattern, error handling, and testing approach.
@@ -262,10 +268,15 @@ See [EFFECT_CYCLE.md](EFFECT_CYCLE.md) for the full design document covering the
 
 - Node.js >= 22
 - pnpm >= 9
+- The [aeon](https://github.com/joshburgess/aeon) FRP library cloned as a sibling directory (the `dom` and `http` packages link to it via `link:../../../aeon/packages/*`)
 
 ### Setup
 
 ```bash
+# Clone aeon as a sibling (required for local development)
+git clone <aeon-repo-url> ../aeon
+cd ../aeon && pnpm install && pnpm build && cd -
+
 git clone <repo-url>
 cd effect-cycle
 pnpm install
@@ -287,7 +298,7 @@ pnpm lint:fix    # Auto-fix lint issues
 packages/
   core/       Core types, run, HMR, observability
   dom/        DOM driver (source, sink, morphdom, isolation)
-  http/       HTTP driver (queue-based routing)
+  http/       HTTP driver (adapter-based routing)
   ws/         WebSocket driver (managed lifecycle)
   router/     Router driver (hash/history routing)
   testing/    Test utilities and helpers

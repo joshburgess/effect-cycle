@@ -6,8 +6,8 @@
  */
 import { describe, expect, it } from "@effect/vitest"
 import { Effect } from "effect"
-import * as fc from "fast-check"
 import { DriverInitError } from "effect-cycle-core"
+import * as fc from "fast-check"
 
 describe("DriverInitError (property-based)", () => {
   const driverNameArb = fc.string({ minLength: 1, maxLength: 30 })

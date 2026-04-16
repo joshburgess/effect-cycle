@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Chunk, Effect, Schema, Stream } from "effect"
-import { WSSource, validatedMessage, validatedMessageEffect } from "effect-cycle-ws"
 import { TestWSSource } from "effect-cycle-testing"
+import { WSSource, validatedMessage, validatedMessageEffect } from "effect-cycle-ws"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -59,11 +59,7 @@ describe("validatedMessage", () => {
       if (result._tag === "Left") {
         expect(result.left._tag).toBe("ParseError")
       }
-    }).pipe(
-      Effect.provide(
-        TestWSSource([makeMessageEvent({ seq: "not-a-number", value: 99 })]),
-      ),
-    ),
+    }).pipe(Effect.provide(TestWSSource([makeMessageEvent({ seq: "not-a-number", value: 99 })]))),
   )
 
   it.effect("works end-to-end with validatedMessageEffect and TestWSSource", () =>
@@ -76,10 +72,6 @@ describe("validatedMessage", () => {
 
       expect(result).toHaveLength(1)
       expect(result[0]).toEqual({ seq: 42, value: "gamma" })
-    }).pipe(
-      Effect.provide(
-        TestWSSource([makeMessageEvent({ seq: 42, value: "gamma" })]),
-      ),
-    ),
+    }).pipe(Effect.provide(TestWSSource([makeMessageEvent({ seq: 42, value: "gamma" })]))),
   )
 })

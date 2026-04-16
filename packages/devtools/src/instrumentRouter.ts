@@ -24,9 +24,7 @@ export const instrumentRouterSource: Layer.Layer<
         original.pipe(
           config.enableMetrics ? Stream.tap(() => Metric.increment(routerNavCount)) : F.identity,
           config.logLevel !== "none"
-            ? Stream.tap((loc) =>
-                Effect.log(`[RouterSource] location changed: ${loc.path}`),
-              )
+            ? Stream.tap((loc) => Effect.log(`[RouterSource] location changed: ${loc.path}`))
             : F.identity,
           config.enableSpans ? Stream.withSpan("router.source.location") : F.identity,
         ),
@@ -62,9 +60,7 @@ export const instrumentRouterSink: Layer.Layer<RouterSink, never, RouterSink | D
             config.logLevel !== "none"
               ? eff.pipe(Effect.tap(() => Effect.log(`[RouterSink] replace("${path}")`)))
               : eff
-          return config.enableSpans
-            ? logged.pipe(Effect.withSpan("router.sink.replace"))
-            : logged
+          return config.enableSpans ? logged.pipe(Effect.withSpan("router.sink.replace")) : logged
         },
       })
     }),

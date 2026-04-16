@@ -12,9 +12,7 @@ export const validatedMessage = <A, I>(
   source: WSSource["Type"],
   schema: Schema.Schema<A, I>,
 ): Stream.Stream<A, WSError | ParseError> =>
-  source.messages.pipe(
-    Stream.mapEffect((event) => Schema.decodeUnknown(schema)(event.data)),
-  )
+  source.messages.pipe(Stream.mapEffect((event) => Schema.decodeUnknown(schema)(event.data)))
 
 /**
  * Like validatedMessage but yields the source from context first.

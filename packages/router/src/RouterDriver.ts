@@ -12,12 +12,12 @@
  * since pushState/replaceState do not fire popstate on their own.
  */
 import { Context, Effect, Layer, Option, Queue, Stream } from "effect"
-import { RouterError } from "./errors.js"
 import { type RouteLocation, matchPath, parseQuery } from "./Location.js"
 import type { Navigation } from "./Navigation.js"
 import { RouterConfig } from "./RouterConfig.js"
 import { RouterSink } from "./RouterSink.js"
 import { RouterSource } from "./RouterSource.js"
+import { RouterError } from "./errors.js"
 
 // ---------------------------------------------------------------------------
 // Internal: read current location from the browser
@@ -148,8 +148,7 @@ export const RouterDriverLive: Layer.Layer<RouterSource | RouterSink, never, Rou
 
       // Sink implementation
       const sink: RouterSink["Type"] = {
-        navigate: (nav$) =>
-          Stream.runForEach(nav$, applyNav).pipe(Effect.fork, Effect.asVoid),
+        navigate: (nav$) => Stream.runForEach(nav$, applyNav).pipe(Effect.fork, Effect.asVoid),
 
         push: (path) => applyNav({ type: "push", path }),
 

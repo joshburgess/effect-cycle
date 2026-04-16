@@ -3,8 +3,8 @@
  */
 import { describe, expect, it } from "@effect/vitest"
 import { Effect } from "effect"
-import * as fc from "fast-check"
 import { HTTPError } from "effect-cycle-http"
+import * as fc from "fast-check"
 
 describe("HTTPError (property-based)", () => {
   const statusArb = fc.integer({ min: 100, max: 599 })

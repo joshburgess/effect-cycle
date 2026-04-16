@@ -1,3 +1,4 @@
+import * as HttpClient from "@effect/platform/HttpClient"
 /**
  * RealWorld (Conduit) -- effect-cycle frontend
  *
@@ -12,9 +13,8 @@
 import type * as HttpClientError from "@effect/platform/HttpClientError"
 import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import { Effect, Queue, Ref, type Scope, Stream } from "effect"
-import * as HttpClient from "@effect/platform/HttpClient"
 import { DOMSink, DOMSource } from "effect-cycle-dom"
-import { matchPath, RouterSink, RouterSource } from "effect-cycle-router"
+import { RouterSink, RouterSource, matchPath } from "effect-cycle-router"
 
 // ---------------------------------------------------------------------------
 // Domain types
@@ -70,7 +70,12 @@ interface Profile {
 type Action =
   | { readonly type: "route-changed"; readonly path: string }
   | { readonly type: "login-submit"; readonly email: string; readonly password: string }
-  | { readonly type: "register-submit"; readonly username: string; readonly email: string; readonly password: string }
+  | {
+      readonly type: "register-submit"
+      readonly username: string
+      readonly email: string
+      readonly password: string
+    }
   | { readonly type: "logout" }
   | {
       readonly type: "settings-submit"
@@ -80,7 +85,11 @@ type Action =
       readonly email: string
       readonly password: string
     }
-  | { readonly type: "set-feed"; readonly feed: "global" | "your" | "tag"; readonly tag?: string | undefined }
+  | {
+      readonly type: "set-feed"
+      readonly feed: "global" | "your" | "tag"
+      readonly tag?: string | undefined
+    }
   | { readonly type: "favorite"; readonly slug: string }
   | { readonly type: "unfavorite"; readonly slug: string }
   | { readonly type: "follow"; readonly username: string }
@@ -103,13 +112,21 @@ type Action =
     }
   | { readonly type: "delete-article"; readonly slug: string }
   | { readonly type: "set-page"; readonly page: number }
-  | { readonly type: "articles-loaded"; readonly articles: ReadonlyArray<Article>; readonly count: number }
+  | {
+      readonly type: "articles-loaded"
+      readonly articles: ReadonlyArray<Article>
+      readonly count: number
+    }
   | { readonly type: "article-loaded"; readonly article: Article }
   | { readonly type: "user-loaded"; readonly user: User }
   | { readonly type: "tags-loaded"; readonly tags: ReadonlyArray<string> }
   | { readonly type: "comments-loaded"; readonly comments: ReadonlyArray<Comment> }
   | { readonly type: "profile-loaded"; readonly profile: Profile }
-  | { readonly type: "profile-articles-loaded"; readonly articles: ReadonlyArray<Article>; readonly count: number }
+  | {
+      readonly type: "profile-articles-loaded"
+      readonly articles: ReadonlyArray<Article>
+      readonly count: number
+    }
   | { readonly type: "api-error"; readonly messages: ReadonlyArray<string> }
   | { readonly type: "set-loading"; readonly loading: boolean }
 
@@ -355,7 +372,9 @@ const handleAction = (
                 count: data.articlesCount,
               })
             }).pipe(
-              Effect.catchAll((err) => handleApiError(err, refs, actions, "Failed to load articles")),
+              Effect.catchAll((err) =>
+                handleApiError(err, refs, actions, "Failed to load articles"),
+              ),
               Effect.asVoid,
             ),
           )
@@ -364,23 +383,24 @@ const handleAction = (
               const json = yield* apiGet(client, "/api/tags", token)
               const data = json as { tags: string[] }
               yield* Queue.offer(actions, { type: "tags-loaded", tags: data.tags })
-            }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
+            }).pipe(
+              Effect.catchAll(() => Effect.void),
+              Effect.asVoid,
+            ),
           )
         } else if (editorMatch) {
           // Editing an existing article -- slug extracted by matchPath
           const slug = editorMatch["slug"]!
           yield* forkApi(
             Effect.gen(function* () {
-              const json = yield* apiGet(
-                client,
-                `/api/articles/${encodeURIComponent(slug)}`,
-                token,
-              )
+              const json = yield* apiGet(client, `/api/articles/${encodeURIComponent(slug)}`, token)
               const data = json as { article: Article }
               yield* Ref.set(refs.editingArticle, data.article)
               yield* Ref.set(refs.loading, false)
             }).pipe(
-              Effect.catchAll((err) => handleApiError(err, refs, actions, "Failed to load article")),
+              Effect.catchAll((err) =>
+                handleApiError(err, refs, actions, "Failed to load article"),
+              ),
               Effect.asVoid,
             ),
           )
@@ -391,11 +411,7 @@ const handleAction = (
           const slug = articleMatch["slug"]!
           yield* forkApi(
             Effect.gen(function* () {
-              const json = yield* apiGet(
-                client,
-                `/api/articles/${encodeURIComponent(slug)}`,
-                token,
-              )
+              const json = yield* apiGet(client, `/api/articles/${encodeURIComponent(slug)}`, token)
               const data = json as { article: Article }
               yield* Queue.offer(actions, { type: "article-loaded", article: data.article })
             }).pipe(
@@ -412,7 +428,10 @@ const handleAction = (
               )
               const data = json as { comments: Comment[] }
               yield* Queue.offer(actions, { type: "comments-loaded", comments: data.comments })
-            }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
+            }).pipe(
+              Effect.catchAll(() => Effect.void),
+              Effect.asVoid,
+            ),
           )
         } else if (path.startsWith("/@")) {
           // Profile routes use @ prefix which doesn't fit matchPath's :param syntax
@@ -445,7 +464,10 @@ const handleAction = (
                 articles: data.articles,
                 count: data.articlesCount,
               })
-            }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
+            }).pipe(
+              Effect.catchAll(() => Effect.void),
+              Effect.asVoid,
+            ),
           )
         } else if (path === "/login" || path === "/register" || path === "/settings") {
           yield* Ref.set(refs.loading, false)
@@ -595,7 +617,10 @@ const handleAction = (
             if (current && current.slug === data.article.slug) {
               yield* Ref.set(refs.article, data.article)
             }
-          }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
+          }).pipe(
+            Effect.catchAll(() => Effect.void),
+            Effect.asVoid,
+          ),
         )
       })
     }
@@ -618,7 +643,10 @@ const handleAction = (
             if (current && current.slug === data.article.slug) {
               yield* Ref.set(refs.article, data.article)
             }
-          }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
+          }).pipe(
+            Effect.catchAll(() => Effect.void),
+            Effect.asVoid,
+          ),
         )
       })
     }
@@ -636,7 +664,10 @@ const handleAction = (
             )
             const data = json as { profile: Profile }
             yield* Queue.offer(actions, { type: "profile-loaded", profile: data.profile })
-          }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
+          }).pipe(
+            Effect.catchAll(() => Effect.void),
+            Effect.asVoid,
+          ),
         )
       })
     }
@@ -653,7 +684,10 @@ const handleAction = (
             )
             const data = json as { profile: Profile }
             yield* Queue.offer(actions, { type: "profile-loaded", profile: data.profile })
-          }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
+          }).pipe(
+            Effect.catchAll(() => Effect.void),
+            Effect.asVoid,
+          ),
         )
       })
     }
@@ -676,7 +710,10 @@ const handleAction = (
             )
             const data = commentsJson as { comments: Comment[] }
             yield* Queue.offer(actions, { type: "comments-loaded", comments: data.comments })
-          }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
+          }).pipe(
+            Effect.catchAll(() => Effect.void),
+            Effect.asVoid,
+          ),
         )
       })
     }
@@ -692,7 +729,10 @@ const handleAction = (
               token,
             )
             yield* Ref.update(refs.comments, (cs) => cs.filter((c) => c.id !== action.id))
-          }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
+          }).pipe(
+            Effect.catchAll(() => Effect.void),
+            Effect.asVoid,
+          ),
         )
       })
     }
@@ -778,13 +818,12 @@ const handleAction = (
         const token = yield* getToken()
         yield* forkApi(
           Effect.gen(function* () {
-            yield* apiDelete(
-              client,
-              `/api/articles/${encodeURIComponent(action.slug)}`,
-              token,
-            )
+            yield* apiDelete(client, `/api/articles/${encodeURIComponent(action.slug)}`, token)
             yield* routerSink.push("/").pipe(Effect.orDie)
-          }).pipe(Effect.catchAll(() => Effect.void), Effect.asVoid),
+          }).pipe(
+            Effect.catchAll(() => Effect.void),
+            Effect.asVoid,
+          ),
         )
       })
     }
@@ -817,7 +856,9 @@ const handleAction = (
                 count: data.articlesCount,
               })
             }).pipe(
-              Effect.catchAll((err) => handleApiError(err, refs, actions, "Failed to load articles")),
+              Effect.catchAll((err) =>
+                handleApiError(err, refs, actions, "Failed to load articles"),
+              ),
               Effect.asVoid,
             ),
           )
@@ -839,7 +880,9 @@ const handleAction = (
                 count: data.articlesCount,
               })
             }).pipe(
-              Effect.catchAll((err) => handleApiError(err, refs, actions, "Failed to load articles")),
+              Effect.catchAll((err) =>
+                handleApiError(err, refs, actions, "Failed to load articles"),
+              ),
               Effect.asVoid,
             ),
           )
@@ -1035,7 +1078,7 @@ const renderHomePage = (state: AppState): string => {
     state.loading && state.tags.length === 0
       ? "<p>Loading tags...</p>"
       : state.tags.length === 0
-        ? "<p>Popular Tags</p><p style=\"color:#aaa;font-size:14px\">No tags yet.</p>"
+        ? '<p>Popular Tags</p><p style="color:#aaa;font-size:14px">No tags yet.</p>'
         : `<p>Popular Tags</p>
        <div class="tag-list">
          ${state.tags.map((t) => `<a class="tag-pill" href="#" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</a>`).join("")}
@@ -1160,8 +1203,7 @@ const renderEditorPage = (state: AppState): string => {
 }
 
 const renderArticlePage = (state: AppState): string => {
-  if (state.loading && !state.article)
-    return '<div class="container"><p>Loading...</p></div>'
+  if (state.loading && !state.article) return '<div class="container"><p>Loading...</p></div>'
   const a = state.article
   if (!a) return '<div class="container"><p>Article not found.</p></div>'
 
@@ -1262,8 +1304,7 @@ const renderArticlePage = (state: AppState): string => {
 }
 
 const renderProfilePage = (state: AppState): string => {
-  if (state.loading && !state.profile)
-    return '<div class="container"><p>Loading...</p></div>'
+  if (state.loading && !state.profile) return '<div class="container"><p>Loading...</p></div>'
   const p = state.profile
   if (!p) return '<div class="container"><p>Profile not found.</p></div>'
 

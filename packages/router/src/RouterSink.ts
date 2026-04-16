@@ -1,7 +1,7 @@
 import type { Effect, Stream } from "effect"
 import { Context } from "effect"
-import type { RouterError } from "./errors.js"
 import type { Navigation } from "./Navigation.js"
+import type { RouterError } from "./errors.js"
 
 /**
  * Write-only router sink service.

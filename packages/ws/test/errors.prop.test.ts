@@ -3,8 +3,8 @@
  */
 import { describe, expect, it } from "@effect/vitest"
 import { Effect } from "effect"
-import * as fc from "fast-check"
 import { WSError } from "effect-cycle-ws"
+import * as fc from "fast-check"
 
 describe("WSError (property-based)", () => {
   const urlArb = fc.webUrl()

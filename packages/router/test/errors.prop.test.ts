@@ -3,8 +3,8 @@
  */
 import { describe, expect, it } from "@effect/vitest"
 import { Effect } from "effect"
-import * as fc from "fast-check"
 import { RouterError } from "effect-cycle-router"
+import * as fc from "fast-check"
 
 describe("RouterError (property-based)", () => {
   const messageArb = fc.string({ maxLength: 200 })

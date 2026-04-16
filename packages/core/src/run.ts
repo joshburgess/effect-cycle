@@ -12,10 +12,15 @@ export const run = <E, R>(
   app.pipe(Effect.provide(drivers), Effect.tapErrorCause(Effect.logError), Effect.runFork)
 
 /**
- * Create a ManagedRuntime for long-lived apps. Useful for hot reload:
- * interrupt the current fiber, then re-run with updated app code.
+ * Create a ManagedRuntime from driver layers. The runtime keeps driver
+ * resources alive across multiple `runFork`/`runPromise` calls.
  *
- * Call `ManagedRuntime.dispose(runtime)` for full shutdown.
+ * For hot module replacement, prefer {@link makeHotRuntime} which manages
+ * a single running fiber automatically.
+ *
+ * Call `runtime.dispose()` for full shutdown.
+ *
+ * @since 0.0.1
  */
 export const makeManagedRuntime = <R>(
   drivers: Layer.Layer<R>,

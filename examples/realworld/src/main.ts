@@ -1,3 +1,14 @@
+/**
+ * Entrypoint for the RealWorld (Conduit) example.
+ *
+ * This example uses HttpClient.HttpClient directly (via FetchHttpClient.layer)
+ * rather than effect-cycle-http's HTTPSource/HTTPSink driver. This is
+ * intentional: it demonstrates that effect-cycle does not force all HTTP
+ * through the driver abstraction. For complex apps with many API endpoints,
+ * using HttpClient directly in Effect.gen gives more control over request
+ * composition, error recovery, and response parsing than the category-based
+ * stream routing that HTTPSource/HTTPSink provides.
+ */
 import { FetchHttpClient } from "@effect/platform"
 import { Layer } from "effect"
 import { run } from "effect-cycle-core"

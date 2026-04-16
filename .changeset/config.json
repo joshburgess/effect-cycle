@@ -1,0 +1,28 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [],
+  "linked": [
+    [
+      "effect-cycle-core",
+      "effect-cycle-dom",
+      "effect-cycle-http",
+      "effect-cycle-ws",
+      "effect-cycle-router",
+      "effect-cycle-testing",
+      "effect-cycle-devtools"
+    ]
+  ],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": [
+    "example-counter",
+    "example-http-search",
+    "example-ws-chat",
+    "example-todomvc",
+    "example-realworld",
+    "example-realworld-api"
+  ]
+}
