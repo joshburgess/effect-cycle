@@ -9,6 +9,16 @@ import { DOMSink } from "./DOMSink.js"
 import { DOMSource } from "./DOMSource.js"
 import { DOMError } from "./errors.js"
 
+/**
+ * Live implementation of the DOM driver.
+ *
+ * Provides `DOMSource` and `DOMSink` backed by the browser DOM.
+ * Uses morphdom for efficient DOM patching and aeon streams for event capture.
+ *
+ * Requires `DOMConfig` to locate the root element.
+ *
+ * @since 0.0.1
+ */
 export const DOMDriverLive: Layer.Layer<DOMSource | DOMSink, DOMError, DOMConfig> =
   Layer.scopedContext(
     Effect.gen(function* () {

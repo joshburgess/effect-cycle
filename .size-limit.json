@@ -1,0 +1,9 @@
+[
+  { "path": "packages/core/dist/index.js", "import": "*", "limit": "65 kB" },
+  { "path": "packages/dom/dist/index.js", "import": "*", "limit": "165 kB" },
+  { "path": "packages/http/dist/index.js", "import": "*", "limit": "170 kB" },
+  { "path": "packages/ws/dist/index.js", "import": "*", "limit": "145 kB" },
+  { "path": "packages/router/dist/index.js", "import": "*", "limit": "100 kB" },
+  { "path": "packages/testing/dist/index.js", "import": "*", "limit": "135 kB" },
+  { "path": "packages/devtools/dist/index.js", "import": "*", "limit": "135 kB" }
+]

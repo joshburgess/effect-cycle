@@ -1,7 +1,14 @@
 /**
  * Route location and path-matching utilities.
+ *
+ * @module
  */
 
+/**
+ * Represents a parsed route location.
+ *
+ * @since 0.0.1
+ */
 export interface RouteLocation {
   /** The full path (without hash prefix or base). e.g. "/articles/my-slug" */
   readonly path: string
@@ -14,14 +21,26 @@ export interface RouteLocation {
 /**
  * Match a path against a pattern with named parameters.
  *
- * Pattern syntax: "/articles/:slug/comments/:id"
- * Returns extracted params or undefined if no match.
+ * Returns extracted params as a record, or `undefined` if the path
+ * does not match.
  *
- * Supports:
- *   - Exact segments: "/foo" matches "/foo"
- *   - Named params: "/:id" captures the segment as "id"
- *   - Trailing segments are ignored when the pattern ends (prefix matching)
- *     is NOT done -- the match must be exact.
+ * Supports exact segments (`/foo`) and named params (`/:id`).
+ * Matching is exact -- trailing segments cause a mismatch.
+ *
+ * @param pattern - Route pattern (e.g. `"/articles/:slug/comments/:id"`).
+ * @param path - The actual URL path to match against.
+ * @returns A record of extracted parameters, or `undefined`.
+ *
+ * @example
+ * ```ts
+ * matchPath("/articles/:slug", "/articles/hello-world")
+ * // => { slug: "hello-world" }
+ *
+ * matchPath("/articles/:slug", "/users/42")
+ * // => undefined
+ * ```
+ *
+ * @since 0.0.1
  */
 export const matchPath = (pattern: string, path: string): Record<string, string> | undefined => {
   const patternParts = pattern.split("/").filter((s) => s.length > 0)
@@ -45,7 +64,15 @@ export const matchPath = (pattern: string, path: string): Record<string, string>
 }
 
 /**
- * Parse query string into a record.
+ * Parse a query string into a key-value record.
+ *
+ * Handles both `"?key=value"` and `"key=value"` formats.
+ * Keys without values get an empty string.
+ *
+ * @param search - The query string to parse.
+ * @returns A record of decoded key-value pairs.
+ *
+ * @since 0.0.1
  */
 export const parseQuery = (search: string): Record<string, string> => {
   const result: Record<string, string> = {}

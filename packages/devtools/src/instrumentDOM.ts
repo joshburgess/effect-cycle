@@ -7,6 +7,11 @@ import { DevToolsConfig } from "./DevToolsConfig.js"
 // instrumentDOMSource
 // -------------------------------------------------------------------------------------
 
+/**
+ * Wraps `DOMSource.select` with metrics, logging, and span instrumentation.
+ *
+ * @since 0.0.1
+ */
 export const instrumentDOMSource: Layer.Layer<DOMSource, never, DOMSource | DevToolsConfig> =
   Layer.unwrapEffect(
     Effect.gen(function* () {
@@ -32,6 +37,11 @@ export const instrumentDOMSource: Layer.Layer<DOMSource, never, DOMSource | DevT
 // instrumentDOMSink
 // -------------------------------------------------------------------------------------
 
+/**
+ * Wraps `DOMSink.render` with metrics, logging, and span instrumentation.
+ *
+ * @since 0.0.1
+ */
 export const instrumentDOMSink: Layer.Layer<DOMSink, never, DOMSink | DevToolsConfig> =
   Layer.unwrapEffect(
     Effect.gen(function* () {
@@ -56,6 +66,11 @@ export const instrumentDOMSink: Layer.Layer<DOMSink, never, DOMSink | DevToolsCo
 // instrumentDOM — convenience merge
 // -------------------------------------------------------------------------------------
 
+/**
+ * Convenience layer that instruments both `DOMSource` and `DOMSink`.
+ *
+ * @since 0.0.1
+ */
 export const instrumentDOM: Layer.Layer<
   DOMSource | DOMSink,
   never,

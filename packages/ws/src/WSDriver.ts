@@ -78,6 +78,14 @@ const makeWSDriver = Effect.gen(function* () {
   return { source, sink }
 })
 
+/**
+ * Live implementation of the WebSocket driver.
+ *
+ * Opens a WebSocket connection on layer construction and closes it
+ * on scope finalization. Requires `WSConfig` for the URL and protocols.
+ *
+ * @since 0.0.1
+ */
 export const WSDriverLive: Layer.Layer<WSSource | WSSink, never, WSConfig> = Layer.scoped(
   WSSource,
   makeWSDriver.pipe(Effect.map(({ source }) => source)),

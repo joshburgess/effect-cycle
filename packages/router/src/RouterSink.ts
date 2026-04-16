@@ -2,6 +2,14 @@ import type { Effect, Stream } from "effect"
 import { Context } from "effect"
 import type { Navigation } from "./Navigation.js"
 
+/**
+ * Write-only router sink service.
+ *
+ * Accepts navigation commands to push, replace, or go back/forward
+ * in the browser history.
+ *
+ * @since 0.0.1
+ */
 export class RouterSink extends Context.Tag("effect-cycle/RouterSink")<
   RouterSink,
   {

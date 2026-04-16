@@ -2,6 +2,14 @@ import type { Effect, Stream } from "effect"
 import { Context } from "effect"
 import type { RouteLocation } from "./Location.js"
 
+/**
+ * Read-only router source service.
+ *
+ * Provides a stream of route locations and pattern-matching helpers.
+ * Emits the initial location immediately, then on every navigation event.
+ *
+ * @since 0.0.1
+ */
 export class RouterSource extends Context.Tag("effect-cycle/RouterSource")<
   RouterSource,
   {

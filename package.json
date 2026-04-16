@@ -11,9 +11,12 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
-    "clean": "pnpm -r run clean"
+    "clean": "pnpm -r run clean",
+    "size": "size-limit"
   },
   "devDependencies": {
+    "@size-limit/preset-small-lib": "^11.2.0",
+    "size-limit": "^11.2.0",
     "@biomejs/biome": "^1.9.4",
     "@effect/platform": "^0.78.0",
     "@effect/vitest": "^0.29.0",

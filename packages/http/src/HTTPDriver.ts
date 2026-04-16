@@ -8,6 +8,16 @@ import { HTTPSink } from "./HTTPSink.js"
 import { HTTPSource } from "./HTTPSource.js"
 import { HTTPError } from "./errors.js"
 
+/**
+ * Live implementation of the HTTP driver.
+ *
+ * Routes requests from `HTTPSink` through `HttpClient` and publishes
+ * responses to `HTTPSource`, correlated by category string.
+ *
+ * Requires `HttpClient.HttpClient` from `@effect/platform`.
+ *
+ * @since 0.0.1
+ */
 export const HTTPDriverLive: Layer.Layer<HTTPSource | HTTPSink, never, HttpClient.HttpClient> =
   Layer.scopedContext(
     Effect.gen(function* () {

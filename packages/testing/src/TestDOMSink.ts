@@ -2,6 +2,14 @@ import { Chunk, Effect, Layer, Ref, Stream } from "effect"
 import { DOMSink } from "effect-cycle-dom"
 import type { VNode } from "effect-cycle-dom"
 
+/**
+ * Creates a test `DOMSink` that captures all rendered VNodes into a `Ref`.
+ *
+ * Returns an Effect that provides both the layer and the `rendered` Ref
+ * for assertion.
+ *
+ * @since 0.0.1
+ */
 export const TestDOMSink = (): Effect.Effect<{
   readonly layer: Layer.Layer<DOMSink>
   readonly rendered: Ref.Ref<Chunk.Chunk<VNode>>
