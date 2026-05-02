@@ -24,5 +24,5 @@ The dev server starts at `http://localhost:5173` (or the next available port).
 
 | File | Description |
 |------|-------------|
-| `src/App.ts` | The entire application -- event selection, state updates, and the render stream |
+| `src/App.ts` | The entire application: event selection, state updates, and the render stream |
 | `src/main.ts` | Layer composition, `makeHotRuntime` setup, and HMR integration |

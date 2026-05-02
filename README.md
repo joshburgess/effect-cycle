@@ -9,12 +9,12 @@ Your app is a pure function from **sources** (inputs) to **sinks** (outputs). Al
 | Package | Description |
 |---|---|
 | `effect-cycle-core` | `App` type, `run`, `makeManagedRuntime`, `HotRuntime`, observability primitives |
-| `effect-cycle-dom` | DOM driver — `DOMSource`, `DOMSink`, morphdom-based rendering, component isolation |
-| `effect-cycle-http` | HTTP driver — adapter-based request routing, `@effect/platform` HttpClient, Schema validation |
-| `effect-cycle-ws` | WebSocket driver — lifecycle-managed connections with `Layer.scoped` |
-| `effect-cycle-router` | Router driver — hash or history-based routing with `RouterSource`/`RouterSink` |
-| `effect-cycle-testing` | Test doubles for every driver — `TestDOMSource`, `TestHTTPSink`, etc. |
-| `effect-cycle-devtools` | Observability layer — metrics, spans, and logging for all drivers |
+| `effect-cycle-dom` | DOM driver: `DOMSource`, `DOMSink`, morphdom-based rendering, component isolation |
+| `effect-cycle-http` | HTTP driver: adapter-based request routing, `@effect/platform` HttpClient, Schema validation |
+| `effect-cycle-ws` | WebSocket driver: lifecycle-managed connections with `Layer.scoped` |
+| `effect-cycle-router` | Router driver: hash or history-based routing with `RouterSource`/`RouterSink` |
+| `effect-cycle-testing` | Test doubles for every driver: `TestDOMSource`, `TestHTTPSink`, etc. |
+| `effect-cycle-devtools` | Observability layer: metrics, spans, and logging for all drivers |
 
 ## Quick Start
 
@@ -61,7 +61,7 @@ run(app, DOMDriverLive.pipe(Layer.provide(DOMConfigDefault)))
 
 ## Testing
 
-Swap live drivers for test doubles — no mocking libraries, no module patching:
+Swap live drivers for test doubles. No mocking libraries, no module patching:
 
 ```typescript
 import { describe, expect, it } from "@effect/vitest"
@@ -126,7 +126,7 @@ const app = Effect.gen(function* () {
 
 ## WebSocket Driver
 
-Lifecycle-managed WebSocket with `Layer.scoped` — the connection opens on scope entry and closes on scope exit:
+Lifecycle-managed WebSocket with `Layer.scoped`. The connection opens on scope entry and closes on scope exit:
 
 ```typescript
 import { Effect, Stream } from "effect"
@@ -240,12 +240,12 @@ import { WSConfigFromEnv } from "effect-cycle-ws"
 
 Working examples live in `examples/`:
 
-- **counter** -- minimal DOM interaction (increment/decrement), with Vite HMR
-- **http-search** -- debounced search with the HTTP driver
-- **ws-chat** -- WebSocket chat with lifecycle management
-- **todomvc** -- component isolation with `isolate`, `Ref`-based shared state, forked child components
-- **realworld** -- full [RealWorld](https://github.com/gothinkster/realworld) (Conduit) SPA with routing, auth, CRUD, pagination
-- **realworld-api** -- mock API server for the RealWorld example
+- **counter**: minimal DOM interaction (increment/decrement), with Vite HMR
+- **http-search**: debounced search with the HTTP driver
+- **ws-chat**: WebSocket chat with lifecycle management
+- **todomvc**: component isolation with `isolate`, `Ref`-based shared state, forked child components
+- **realworld**: full [RealWorld](https://github.com/gothinkster/realworld) (Conduit) SPA with routing, auth, CRUD, pagination
+- **realworld-api**: mock API server for the RealWorld example
 
 Run any example:
 

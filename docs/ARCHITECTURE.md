@@ -10,7 +10,7 @@ An effect-cycle app is a pure `Effect` that reads services (sources) and writes 
 App = Effect<void, E, DOMSource | DOMSink | HTTPSource | HTTPSink | ...>
 ```
 
-The `R` type parameter accumulates all required services automatically. The app never constructs a driver — it only yields service tags from context. Drivers are provided externally via `Layer` at the application boundary.
+The `R` type parameter accumulates all required services automatically. The app never constructs a driver; it only yields service tags from context. Drivers are provided externally via `Layer` at the application boundary.
 
 ```
 ┌─────────────────────────────────┐
@@ -33,13 +33,13 @@ This is the same architecture as Cycle.js, but implemented with Effect's `Contex
 
 ## Services and Tags
 
-Every driver exposes two services — a **source** (reads from the outside world) and a **sink** (writes to the outside world):
+Every driver exposes two services: a **source** (reads from the outside world) and a **sink** (writes to the outside world):
 
 | Driver | Source | Sink |
 |--------|--------|------|
-| DOM | `DOMSource` — `select(selector)` returns `Stream<Event>` | `DOMSink` — `render(vdom$)` writes HTML to the DOM |
-| HTTP | `HTTPSource` — `response(category)` returns `Stream<HttpClientResponse>` | `HTTPSink` — `request(category, req$)` sends HTTP requests |
-| WebSocket | `WSSource` — `messages` stream + `connected` effect | `WSSink` — `send(msg$)` pushes messages to the socket |
+| DOM | `DOMSource`: `select(selector)` returns `Stream<Event>` | `DOMSink`: `render(vdom$)` writes HTML to the DOM |
+| HTTP | `HTTPSource`: `response(category)` returns `Stream<HttpClientResponse>` | `HTTPSink`: `request(category, req$)` sends HTTP requests |
+| WebSocket | `WSSource`: `messages` stream + `connected` effect | `WSSink`: `send(msg$)` pushes messages to the socket |
 
 Services are defined using the `class extends Context.Tag(...)` pattern:
 
@@ -57,14 +57,14 @@ All tag identifiers use the `"effect-cycle/"` prefix.
 
 ## Layer Architecture
 
-Drivers are implemented as `Layer`s — specifically `Layer.scopedContext` or `Layer.scoped` — which ties their lifecycle to Effect's `Scope`. Resources are acquired on layer construction and released via `Effect.addFinalizer`.
+Drivers are implemented as `Layer`s (specifically `Layer.scopedContext` or `Layer.scoped`), which ties their lifecycle to Effect's `Scope`. Resources are acquired on layer construction and released via `Effect.addFinalizer`.
 
 ### DOM Driver
 
 `DOMDriverLive: Layer<DOMSource | DOMSink, DOMError, DOMConfig>`
 
 - Requires `DOMConfig` (defaults to `{ rootSelector: "#app" }`)
-- Queries `document.querySelector(rootSelector)` during construction — fails with `DOMError` if not found
+- Queries `document.querySelector(rootSelector)` during construction; fails with `DOMError` if not found
 - `select(selector)` bridges `addEventListener`/`removeEventListener` into a `Stream` via `Stream.async`
 - `render(vdom$)` forks a fiber that drains the stream, using [morphdom](https://github.com/patrick-steele-idem/morphdom) for efficient DOM patching
 - Finalizer clears `root.innerHTML`
@@ -184,7 +184,7 @@ const users$ = validatedResponse(source, "users", UserSchema)
 // Stream<User, HTTPError | ResponseError | ParseError>
 ```
 
-Parse failures appear as typed `ParseError` in the stream's error channel — no `unknown` to deal with downstream.
+Parse failures appear as typed `ParseError` in the stream's error channel. No `unknown` to deal with downstream.
 
 ## Config Integration
 
@@ -193,7 +193,7 @@ Drivers can read configuration from environment variables via `Effect.Config`:
 - `HTTPDriverConfigured` reads `HTTP_BASE_URL`, `HTTP_TIMEOUT_MS`, `HTTP_RETRIES` and applies them to the `HttpClient`
 - `WSConfigFromEnv` reads `WS_URL` (required) and `WS_PROTOCOLS` (optional)
 
-Config layers compose like any other layer — they can be overridden in tests by providing explicit values.
+Config layers compose like any other layer. They can be overridden in tests by providing explicit values.
 
 ## Observability
 
@@ -227,16 +227,16 @@ const instrumented = instrumentService(DOMSource, {
 
 `effect-cycle-devtools` provides pre-configured instrumentation layers:
 
-- `instrumentDOMSource` / `instrumentDOMSink` / `instrumentDOM` — metrics and logging for DOM operations
-- `instrumentHTTP` — metrics and logging for HTTP requests
-- `instrumentWS` — metrics and logging for WebSocket messages
-- `DevToolsLayer` — merges all of the above
+- `instrumentDOMSource` / `instrumentDOMSink` / `instrumentDOM`: metrics and logging for DOM operations
+- `instrumentHTTP`: metrics and logging for HTTP requests
+- `instrumentWS`: metrics and logging for WebSocket messages
+- `DevToolsLayer`: merges all of the above
 
 All controlled by `DevToolsConfig` with `logLevel`, `enableMetrics`, and `enableSpans` flags.
 
 ## Testing
 
-Testing is purely compositional — swap `Layer`s, no mocking framework:
+Testing is purely compositional. Swap `Layer`s, no mocking framework:
 
 ### Test Factories
 

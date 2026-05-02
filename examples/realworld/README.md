@@ -35,6 +35,6 @@ The frontend starts at `http://localhost:5173` and proxies API calls to `http://
 
 | File | Description |
 |------|-------------|
-| `src/App.ts` | Full application -- domain types, action union, state refs, HTTP calls, event delegation, and render pipeline |
+| `src/App.ts` | Full application: domain types, action union, state refs, HTTP calls, event delegation, and render pipeline |
 | `src/main.ts` | Layer composition for DOM, router, and `FetchHttpClient` drivers |
 | `src/styles.css` | Conduit reference stylesheet |

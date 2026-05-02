@@ -8,7 +8,7 @@ A Node.js HTTP server implementing the [RealWorld backend spec](https://github.c
 pnpm start
 ```
 
-The server listens on `http://localhost:4100`. No database is needed -- all data is stored in an in-memory `Store` layer that resets when the process restarts.
+The server listens on `http://localhost:4100`. No database is needed. All data is stored in an in-memory `Store` layer that resets when the process restarts.
 
 ## What it demonstrates
 

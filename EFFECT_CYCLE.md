@@ -9,7 +9,7 @@
 
 Cycle.js had a brilliant insight: your application is a **pure function** from inputs (sources) to outputs (sinks), with all side effects pushed to "drivers" at the edges. This is the "functional core, imperative shell" pattern taken to its logical extreme.
 
-The problem was never the architecture — it was the implementation. Cycle tried to build a dependency injection system, a lifecycle manager, an error recovery system, and a concurrency model out of nothing but RxJS streams and ad-hoc wiring. Effect already *is* all of those things.
+The problem was never the architecture; it was the implementation. Cycle tried to build a dependency injection system, a lifecycle manager, an error recovery system, and a concurrency model out of nothing but RxJS streams and ad-hoc wiring. Effect already *is* all of those things.
 
 Effect-Cycle isn't a framework. It's a **pattern** for applying Cycle's architecture using Effect's existing primitives.
 
@@ -25,7 +25,7 @@ Cycle's signature looks simple:
 function main(sources: Sources): Sinks
 ```
 
-But `Sources` is determined by the drivers, and the drivers consume `Sinks`, which is the return type of `main`, which takes `Sources` as input. This circular dependency was essentially unsolvable in TypeScript. The community tried mapped types, conditional types, declaration merging — nothing worked cleanly. Most apps ended up with `any` somewhere in the chain.
+But `Sources` is determined by the drivers, and the drivers consume `Sinks`, which is the return type of `main`, which takes `Sources` as input. This circular dependency was essentially unsolvable in TypeScript. The community tried mapped types, conditional types, declaration merging. Nothing worked cleanly. Most apps ended up with `any` somewhere in the chain.
 
 ### 2. Stream Library Lock-in
 
@@ -47,7 +47,7 @@ No static verification. No guarantees about resource cleanup when a component un
 
 ### 5. Error Handling Was an Afterthought
 
-A stream error would propagate up and often kill the entire application. There was no typed error channel — you'd use `.catch()` and hope for the best. One bad HTTP response parsing could take down your DOM rendering.
+A stream error would propagate up and often kill the entire application. There was no typed error channel, so you'd use `.catch()` and hope for the best. One bad HTTP response parsing could take down your DOM rendering.
 
 ### 6. Testing Required Stream Mocking
 
@@ -61,9 +61,9 @@ Testing a Cycle component meant manually constructing fake source streams, subsc
 |---|---|---|
 | App signature | `main(sources) → sinks` (untyped circular) | `Effect.gen` with services in the `R` channel (inferred, acyclic) |
 | Driver | Bare function: `sink$ → source$` | `Layer` with lifecycle, DI, and composition |
-| Error handling | Stream `.catch()` — often kills the app | Typed `E` channel with `catchTags`, retry, fallback |
+| Error handling | Stream `.catch()`, often kills the app | Typed `E` channel with `catchTags`, retry, fallback |
 | Isolation | `isolate(C, 'string-scope')` | `Scope` + namespaced `Layer` (type-safe) |
-| Testing | Mock streams, manual wiring | Swap `Layer.succeed(TestImpl)` — no mocking library |
+| Testing | Mock streams, manual wiring | Swap `Layer.succeed(TestImpl)`, no mocking library |
 | Resource cleanup | Manual `dispose()` | `Scope.addFinalizer` (guaranteed, deterministic) |
 | Concurrency | Depends on Rx scheduler | Fiber-based structured concurrency |
 | Stream library | xstream/RxJS (locked in) | `Effect.Stream` (or adapt anything) |
@@ -92,7 +92,7 @@ The system is organized into four layers. Each layer only knows about the one di
 
 ---
 
-## 1. The Core Type: App as a Pure Function — Now With Real Types
+## 1. The Core Type: App as a Pure Function, Now With Real Types
 
 ### The Problem
 
@@ -100,7 +100,7 @@ Cycle.js typed `main` as essentially `(sources: any) => any`. Circular inference
 
 ### The Solution
 
-Effect's service pattern (`Context.Tag`) lets us declare source/sink contracts as tagged services. The app function returns an `Effect` that declares its requirements in the `R` channel — no circular types needed.
+Effect's service pattern (`Context.Tag`) lets us declare source/sink contracts as tagged services. The app function returns an `Effect` that declares its requirements in the `R` channel, with no circular types needed.
 
 ```typescript
 import { Effect, Context, Stream, Layer } from "effect"
@@ -166,7 +166,7 @@ The inferred type of `app` is:
 
 ```typescript
 Effect.Effect<void, HTTPError, DOMSource | DOMSink | HTTPSource | HTTPSink>
-//            ^success ^error    ^requirements — all inferred automatically
+//            ^success ^error    ^requirements (all inferred automatically)
 ```
 
 No circular inference. No generics gymnastics. The `R` channel accumulates requirements as you `yield*` services, and TypeScript tracks it all.
@@ -265,7 +265,7 @@ const WSDriverLive = Layer.scoped(WSSource,
 )
 ```
 
-Now compose all drivers — order and dependencies resolved automatically:
+Now compose all drivers. Order and dependencies resolved automatically:
 
 ```typescript
 const DriversLive = Layer.mergeAll(
@@ -291,7 +291,7 @@ Layer handles the dependency DAG. If `WSDriverLive` requires `AuthService`, and 
 
 ### The Problem
 
-In Cycle.js, a stream error would propagate and often kill the entire application. There was no typed error channel — you'd `.catch()` and hope for the best. One bad JSON parse in an HTTP response stream could take down DOM rendering.
+In Cycle.js, a stream error would propagate and often kill the entire application. There was no typed error channel, so you'd `.catch()` and hope for the best. One bad JSON parse in an HTTP response stream could take down DOM rendering.
 
 ### The Solution
 
@@ -337,7 +337,7 @@ const resilientFetch = (url: string) =>
   )
 ```
 
-Exhaustive error handling — the compiler tells you what you missed:
+Exhaustive error handling. The compiler tells you what you missed:
 
 ```typescript
 const handled = resilientFetch("/api/data").pipe(
@@ -352,7 +352,7 @@ const handled = resilientFetch("/api/data").pipe(
 // TypeScript flags it. No silent swallowing.
 ```
 
-Stream-level recovery — one bad event doesn't kill the stream:
+Stream-level recovery. One bad event doesn't kill the stream:
 
 ```typescript
 const safeStream = http.response("users").pipe(
@@ -400,7 +400,7 @@ const isolate = <R, E>(
   Effect.gen(function* () {
     const parentDOM = yield* DOMSource
 
-    // Namespaced DOM source — scoped to this component's subtree
+    // Namespaced DOM source, scoped to this component's subtree
     const namespacedDOM = Layer.succeed(DOMSource, {
       select: (sel) =>
         parentDOM.select(`[data-ns="${namespace}"] ${sel}`),
@@ -567,7 +567,7 @@ const fiber = await DevRuntime.runFork(app)
 await Fiber.interrupt(fiber)
 const newFiber = await DevRuntime.runFork(updatedApp)
 
-// Full shutdown — all resources released
+// Full shutdown, all resources released
 await ManagedRuntime.dispose(DevRuntime)
 ```
 
@@ -583,7 +583,7 @@ Fibers mean you can fork background tasks (polling, WebSocket heartbeats) and th
 
 ```typescript
 const app = Effect.gen(function* () {
-  // Fork a background heartbeat — it dies when the app dies
+  // Fork a background heartbeat that dies when the app dies
   yield* Stream.tick("30 seconds").pipe(
     Stream.tap(() => sendHeartbeat),
     Stream.runDrain,
@@ -629,7 +629,7 @@ const users$ = http.response("users").pipe(
 
 ### Config and Feature Flags
 
-Effect's `Config` system lets drivers read configuration from environment, files, or remote sources — with typed fallbacks:
+Effect's `Config` system lets drivers read configuration from environment, files, or remote sources, with typed fallbacks:
 
 ```typescript
 const APIBaseURL = Config.string("API_BASE_URL").pipe(
@@ -648,7 +648,7 @@ const HTTPDriverLive = Layer.scoped(HTTPSource,
 
 ## Summary
 
-Effect-Cycle keeps the brilliant core insight of Cycle.js — your app is a pure function, side effects live at the edges — but replaces the ad-hoc machinery with Effect's battle-tested primitives:
+Effect-Cycle keeps the brilliant core insight of Cycle.js (your app is a pure function, side effects live at the edges) but replaces the ad-hoc machinery with Effect's battle-tested primitives:
 
 - **`Context.Tag`** replaces circular type inference
 - **`Layer`** replaces hand-rolled driver lifecycle
