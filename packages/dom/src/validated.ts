@@ -3,13 +3,27 @@ import type { ParseError } from "effect/ParseResult"
 import { DOMSource } from "./DOMSource.js"
 
 /**
- * Wraps a DOMSource.select stream to extract and decode the `detail` field
- * (for CustomEvent) or the event itself through the given Schema. Useful for
+ * Wraps a `DOMSource.select` stream to extract and decode the `detail` field
+ * (for `CustomEvent`) or the event itself through the given `Schema`. Useful for
  * validating form submissions and custom events that carry structured data.
  *
- * The extractor function pulls the raw value out of the event before decoding.
- * For CustomEvent: `(e) => (e as CustomEvent).detail`
- * For input events: `(e) => (e.target as HTMLInputElement).value`
+ * The `extract` function pulls the raw value out of the event before decoding.
+ * For `CustomEvent`: `(e) => (e as CustomEvent).detail`.
+ * For input events: `(e) => (e.target as HTMLInputElement).value`.
+ *
+ * @example
+ * ```ts
+ * const FormSchema = Schema.Struct({ name: Schema.String, age: Schema.Number })
+ * const submissions$ = validatedEvent(
+ *   dom,
+ *   "form#signup",
+ *   "submit",
+ *   (e) => (e as CustomEvent).detail,
+ *   FormSchema,
+ * )
+ * ```
+ *
+ * @since 0.1.0
  */
 export const validatedEvent = <A, I>(
   source: DOMSource["Type"],
@@ -23,9 +37,14 @@ export const validatedEvent = <A, I>(
     .pipe(Stream.mapEffect((event) => Schema.decodeUnknown(schema)(extract(event))))
 
 /**
- * Like validatedEvent but yields the source from context first.
- * Use inside Effect.gen:
- *   `const values$ = yield* validatedEventEffect("form", "submit", extract, MySchema)`
+ * Like {@link validatedEvent} but yields the source from context first.
+ *
+ * Use inside `Effect.gen`:
+ * ```ts
+ * const values$ = yield* validatedEventEffect("form", "submit", extract, MySchema)
+ * ```
+ *
+ * @since 0.1.0
  */
 export const validatedEventEffect = <A, I>(
   selector: string,

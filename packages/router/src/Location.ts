@@ -72,6 +72,15 @@ export const matchPath = (pattern: string, path: string): Record<string, string>
  * @param search - The query string to parse.
  * @returns A record of decoded key-value pairs.
  *
+ * @example
+ * ```ts
+ * parseQuery("?page=2&sort=desc")
+ * // => { page: "2", sort: "desc" }
+ *
+ * parseQuery("flag")
+ * // => { flag: "" }
+ * ```
+ *
  * @since 0.1.0
  */
 export const parseQuery = (search: string): Record<string, string> => {

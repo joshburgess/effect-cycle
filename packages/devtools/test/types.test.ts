@@ -7,10 +7,14 @@ import {
   instrumentDOMSink,
   instrumentDOMSource,
   instrumentHTTP,
+  instrumentHTTPSink,
+  instrumentHTTPSource,
   instrumentRouter,
   instrumentRouterSink,
   instrumentRouterSource,
   instrumentWS,
+  instrumentWSSink,
+  instrumentWSSource,
 } from "effect-cycle-devtools"
 import type { DOMSink, DOMSource } from "effect-cycle-dom"
 import type { HTTPSink, HTTPSource } from "effect-cycle-http"
@@ -71,9 +75,27 @@ describe("driver-specific layers", () => {
     >()
   })
 
+  it("instrumentHTTPSource and instrumentHTTPSink are individually typed", () => {
+    expectTypeOf(instrumentHTTPSource).toEqualTypeOf<
+      Layer.Layer<HTTPSource, never, HTTPSource | DevToolsConfig>
+    >()
+    expectTypeOf(instrumentHTTPSink).toEqualTypeOf<
+      Layer.Layer<HTTPSink, never, HTTPSink | DevToolsConfig>
+    >()
+  })
+
   it("instrumentWS: Layer<WSSource | WSSink, ...>", () => {
     expectTypeOf(instrumentWS).toEqualTypeOf<
       Layer.Layer<WSSource | WSSink, never, WSSource | WSSink | DevToolsConfig>
+    >()
+  })
+
+  it("instrumentWSSource and instrumentWSSink are individually typed", () => {
+    expectTypeOf(instrumentWSSource).toEqualTypeOf<
+      Layer.Layer<WSSource, never, WSSource | DevToolsConfig>
+    >()
+    expectTypeOf(instrumentWSSink).toEqualTypeOf<
+      Layer.Layer<WSSink, never, WSSink | DevToolsConfig>
     >()
   })
 

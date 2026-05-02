@@ -7,6 +7,8 @@ import { type Context, Effect, Layer, Metric } from "effect"
 /**
  * Wraps an Effect-returning function with an Effect.withSpan call.
  * Useful for instrumenting driver service methods.
+ *
+ * @since 0.1.0
  */
 export const withEffectSpan =
   <Args extends ReadonlyArray<unknown>, A, E, R>(
@@ -20,25 +22,53 @@ export const withEffectSpan =
 // Pre-built metrics
 // -------------------------------------------------------------------------------------
 
-/** Counter: total HTTP requests sent */
+/**
+ * Counter: total HTTP requests sent.
+ *
+ * @since 0.1.0
+ */
 export const httpRequestCount = Metric.counter("effect_cycle.http.requests.total")
 
-/** Counter: total HTTP errors */
+/**
+ * Counter: total HTTP errors.
+ *
+ * @since 0.1.0
+ */
 export const httpErrorCount = Metric.counter("effect_cycle.http.errors.total")
 
-/** Counter: total WebSocket messages received */
+/**
+ * Counter: total WebSocket messages received.
+ *
+ * @since 0.1.0
+ */
 export const wsMessageCount = Metric.counter("effect_cycle.ws.messages.received")
 
-/** Counter: total WebSocket messages sent */
+/**
+ * Counter: total WebSocket messages sent.
+ *
+ * @since 0.1.0
+ */
 export const wsSendCount = Metric.counter("effect_cycle.ws.messages.sent")
 
-/** Counter: total DOM events captured */
+/**
+ * Counter: total DOM events captured.
+ *
+ * @since 0.1.0
+ */
 export const domEventCount = Metric.counter("effect_cycle.dom.events.total")
 
-/** Counter: total DOM renders */
+/**
+ * Counter: total DOM renders.
+ *
+ * @since 0.1.0
+ */
 export const domRenderCount = Metric.counter("effect_cycle.dom.renders.total")
 
-/** Counter: total router navigations */
+/**
+ * Counter: total router navigations.
+ *
+ * @since 0.1.0
+ */
 export const routerNavCount = Metric.counter("effect_cycle.router.navigations.total")
 
 // -------------------------------------------------------------------------------------
@@ -58,6 +88,8 @@ export const routerNavCount = Metric.counter("effect_cycle.router.navigations.to
  *   doWork: (original) => withEffectSpan("my-service.doWork", original),
  * })
  * ```
+ *
+ * @since 0.1.0
  */
 export const instrumentService = <Id, Service extends object>(
   tag: Context.Tag<Id, Service>,

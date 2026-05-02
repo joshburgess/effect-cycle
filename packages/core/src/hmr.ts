@@ -4,6 +4,8 @@ import type { App } from "./App.js"
 /**
  * Minimal subset of Vite's `import.meta.hot` interface used by {@link installHmr}.
  * Declared here to avoid taking a hard dependency on Vite types from core.
+ *
+ * @since 0.1.0
  */
 export interface HmrHook {
   readonly accept: (cb: () => void) => void
@@ -14,6 +16,8 @@ export interface HmrHook {
  * A runtime that supports hot module replacement.
  * Manages a single running fiber that can be interrupted and restarted
  * with new app code while preserving the driver layers.
+ *
+ * @since 0.1.0
  */
 export interface HotRuntime<R> {
   /** Run (or restart) the app. Interrupts any currently running fiber first. */
@@ -29,6 +33,8 @@ export interface HotRuntime<R> {
  *
  * Returns an Effect because internal state (Ref) must be allocated effectfully.
  * Run with `Effect.runPromise` at the application boundary.
+ *
+ * @since 0.1.0
  */
 export const makeHotRuntime = <R>(drivers: Layer.Layer<R>): Effect.Effect<HotRuntime<R>> =>
   Effect.gen(function* () {
@@ -71,6 +77,15 @@ export const makeHotRuntime = <R>(drivers: Layer.Layer<R>): Effect.Effect<HotRun
  *
  * Pass `import.meta.hot` for the `hot` argument; production builds where
  * `hot` is `undefined` will simply start the app once.
+ *
+ * @example
+ * ```ts
+ * import { installHmr } from "effect-cycle-core"
+ * import { DOMDriverLive, DOMConfigDefault } from "effect-cycle-dom"
+ *
+ * const drivers = DOMDriverLive.pipe(Layer.provide(DOMConfigDefault), Layer.orDie)
+ * installHmr(drivers, app, import.meta.hot)
+ * ```
  *
  * @since 0.1.0
  */

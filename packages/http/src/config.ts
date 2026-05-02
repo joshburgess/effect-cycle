@@ -9,6 +9,8 @@ import type { HTTPSource } from "./HTTPSource.js"
 /**
  * Config values that the HTTP driver can read from the environment.
  * All have sensible defaults so the driver works zero-config.
+ *
+ * @since 0.1.0
  */
 export const HTTPConfig = {
   /** Base URL prepended to all request URLs. Default: "" (no prefix) */
@@ -25,6 +27,8 @@ export const HTTPConfig = {
  *
  * Requires HttpClient.HttpClient (the raw client) and provides HTTPSource | HTTPSink
  * with the config applied.
+ *
+ * @since 0.1.0
  */
 export const HTTPDriverConfigured: Layer.Layer<
   HTTPSource | HTTPSink,

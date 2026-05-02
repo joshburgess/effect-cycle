@@ -7,7 +7,13 @@ import { DevToolsConfig } from "./DevToolsConfig.js"
 // instrumentHTTPSource
 // -------------------------------------------------------------------------------------
 
-const instrumentHTTPSource: Layer.Layer<HTTPSource, never, HTTPSource | DevToolsConfig> =
+/**
+ * Wraps `HTTPSource.response` and `HTTPSource.errors` with metrics, logging,
+ * and span instrumentation.
+ *
+ * @since 0.1.0
+ */
+export const instrumentHTTPSource: Layer.Layer<HTTPSource, never, HTTPSource | DevToolsConfig> =
   Layer.unwrapEffect(
     Effect.gen(function* () {
       const config = yield* DevToolsConfig
@@ -44,7 +50,12 @@ const instrumentHTTPSource: Layer.Layer<HTTPSource, never, HTTPSource | DevTools
 // instrumentHTTPSink
 // -------------------------------------------------------------------------------------
 
-const instrumentHTTPSink: Layer.Layer<HTTPSink, never, HTTPSink | DevToolsConfig> =
+/**
+ * Wraps `HTTPSink.request` with metrics, logging, and span instrumentation.
+ *
+ * @since 0.1.0
+ */
+export const instrumentHTTPSink: Layer.Layer<HTTPSink, never, HTTPSink | DevToolsConfig> =
   Layer.unwrapEffect(
     Effect.gen(function* () {
       const config = yield* DevToolsConfig
@@ -70,6 +81,11 @@ const instrumentHTTPSink: Layer.Layer<HTTPSink, never, HTTPSink | DevToolsConfig
 // instrumentHTTP: convenience merge
 // -------------------------------------------------------------------------------------
 
+/**
+ * Convenience layer that instruments both `HTTPSource` and `HTTPSink`.
+ *
+ * @since 0.1.0
+ */
 export const instrumentHTTP: Layer.Layer<
   HTTPSource | HTTPSink,
   never,

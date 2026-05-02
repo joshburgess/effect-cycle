@@ -1,16 +1,3 @@
-/**
- * RouterDriverLive: bridges the browser History/hash API to Effect Streams.
- *
- * Supports two modes:
- *   - "hash": reads/writes window.location.hash (e.g. "#/articles/foo")
- *   - "history": reads/writes the real URL path via pushState/replaceState
- *
- * The source emits a RouteLocation on every navigation event. The sink
- * accepts Navigation commands and applies them to the browser.
- *
- * Navigation commands from the sink also trigger the source to emit,
- * since pushState/replaceState do not fire popstate on their own.
- */
 import { Context, Effect, Layer, Option, Queue, Stream } from "effect"
 import { type RouteLocation, matchPath, parseQuery } from "./Location.js"
 import type { Navigation } from "./Navigation.js"
@@ -53,6 +40,24 @@ const stripBase = (path: string, base: string): string => {
 // Driver Layer
 // ---------------------------------------------------------------------------
 
+/**
+ * Live implementation of the router driver.
+ *
+ * Bridges the browser History / hash API to Effect `Stream`s. Supports two
+ * modes (configured via `RouterConfig`):
+ *
+ * - `"hash"`: reads and writes `window.location.hash` (e.g. `"#/articles/foo"`).
+ * - `"history"`: reads and writes the real URL path via `pushState` /
+ *   `replaceState`.
+ *
+ * `RouterSource` emits a `RouteLocation` on every navigation event, including
+ * the initial location at startup. `RouterSink` accepts `Navigation` commands
+ * and applies them to the browser; commands from the sink also trigger the
+ * source to emit, since `pushState` / `replaceState` do not fire `popstate`
+ * on their own.
+ *
+ * @since 0.1.0
+ */
 export const RouterDriverLive: Layer.Layer<RouterSource | RouterSink, never, RouterConfig> =
   Layer.scopedContext(
     Effect.gen(function* () {

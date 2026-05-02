@@ -10,8 +10,24 @@ import { DOMError } from "./errors.js"
 /**
  * Isolates a component into a namespaced DOM subtree.
  *
- * - The component's DOMSource scopes selectors within `[data-ns="${namespace}"]`
- * - The component's DOMSink renders into the `[data-ns="${namespace}"]` child element
+ * - The component's `DOMSource` scopes selectors within `[data-ns="${namespace}"]`.
+ * - The component's `DOMSink` renders into the `[data-ns="${namespace}"]` child element.
+ *
+ * Fails with {@link DOMError} if the namespace element does not exist
+ * inside the parent's root.
+ *
+ * @example
+ * ```ts
+ * const counter = Effect.gen(function* () {
+ *   const dom = yield* DOMSource
+ *   const sink = yield* DOMSink
+ *   // ... component logic, scoped to the namespaced root
+ * })
+ *
+ * const app = isolate(counter, "my-counter")
+ * ```
+ *
+ * @since 0.1.0
  */
 export const isolate = <A, E, R>(
   component: Effect.Effect<A, E, R>,
