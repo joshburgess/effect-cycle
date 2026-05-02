@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from "@effect/vitest"
-import { Effect, Layer, Stream, TestClock } from "effect"
+import { Chunk, Effect, Fiber, Layer, Stream } from "effect"
 import { DOMConfig, DOMDriverLive, DOMError, DOMSink, DOMSource } from "effect-cycle-dom"
 
 const makeTestConfig = (selector: string) => Layer.succeed(DOMConfig, { rootSelector: selector })
@@ -18,28 +18,22 @@ describe("DOMDriverLive", () => {
     it.effect("select emits events when a matching element is clicked", () =>
       Effect.gen(function* () {
         const source = yield* DOMSource
+        const stream = source.select(".btn", "click")
 
-        const clickReceived = yield* Effect.async<boolean>((resolve) => {
-          let done = false
-          const stream = source.select(".btn", "click")
+        // Fork the take-one collection so the listener attaches before the click
+        const fiber = yield* stream.pipe(Stream.take(1), Stream.runCollect, Effect.fork)
 
-          Stream.runForEach(stream, () =>
-            Effect.sync(() => {
-              if (!done) {
-                done = true
-                resolve(Effect.succeed(true))
-              }
-            }),
-          ).pipe(Effect.runFork)
+        // Yield to let the forked fiber subscribe and attach the DOM listener
+        yield* Effect.yieldNow()
+        yield* Effect.yieldNow()
 
-          // Trigger click after listener is set up
-          setTimeout(() => {
-            const btn = document.querySelector(".btn") as HTMLButtonElement
-            btn.click()
-          }, 10)
+        yield* Effect.sync(() => {
+          const btn = document.querySelector(".btn") as HTMLButtonElement
+          btn.click()
         })
 
-        expect(clickReceived).toBe(true)
+        const events = Chunk.toArray(yield* Fiber.join(fiber))
+        expect(events).toHaveLength(1)
       }).pipe(Effect.provide(DOMDriverLive), Effect.provide(makeTestConfig("#app"))),
     )
 

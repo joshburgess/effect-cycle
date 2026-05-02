@@ -68,11 +68,19 @@ export const instrumentService = <Id, Service extends object>(
     Effect.gen(function* () {
       const service = yield* tag
       const patched = { ...service } as Service
-      for (const key of Object.keys(wrappers) as Array<keyof typeof wrappers>) {
+      // The per-key call is hoisted into a generic function so K is captured
+      // on each iteration; otherwise TS widens to keyof Service and the
+      // function-union vs. value-union variance prevents the assignment.
+      const patchKey = <K extends keyof Service>(
+        key: K,
+        wrap: (orig: Service[K]) => Service[K],
+      ) => {
+        patched[key] = wrap(service[key])
+      }
+      for (const key of Object.keys(wrappers) as Array<keyof Service>) {
         const wrapper = wrappers[key]
         if (wrapper !== undefined) {
-          // biome-ignore lint/suspicious/noExplicitAny: generic key-based patching requires any
-          patched[key] = wrapper(service[key]) as any
+          patchKey(key, wrapper)
         }
       }
       return patched
