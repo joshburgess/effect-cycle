@@ -25,7 +25,6 @@ pnpm test        # should show all tests passing
 | `pnpm lint` | Biome lint + format check |
 | `pnpm lint:fix` | Auto-fix lint/format issues |
 | `pnpm size` | Check bundle sizes against limits (requires build first) |
-| `pnpm changeset` | Create a changeset for your changes |
 
 ## Project Structure
 
@@ -101,18 +100,6 @@ rm -rf dist && rollup -c rollup.config.mjs && tsc -p tsconfig.build.json && cp d
 - **tsc** for type declarations only (`emitDeclarationOnly`)
 - **Vitest** for tests
 - **size-limit** for bundle size tracking
-
-## Changesets
-
-This project uses [Changesets](https://github.com/changesets/changesets) for versioning.
-
-Before submitting a PR that changes any package, run:
-
-```bash
-pnpm changeset
-```
-
-Select the affected packages, choose the bump type, and write a summary. Commit the generated changeset file with your PR.
 
 ## Design Reference
 

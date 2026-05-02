@@ -13,14 +13,11 @@
     "format": "biome format --write .",
     "clean": "pnpm -r run clean",
     "size": "size-limit",
-    "changeset": "changeset",
-    "version-packages": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && pnpm -r --filter './packages/*' publish --access public"
   },
   "devDependencies": {
     "@size-limit/preset-small-lib": "^11.2.0",
     "size-limit": "^11.2.0",
-    "@changesets/cli": "^2.29.0",
     "@biomejs/biome": "^1.9.4",
     "@effect/platform": "^0.78.0",
     "@effect/vitest": "^0.29.0",
