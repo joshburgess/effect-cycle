@@ -32,8 +32,11 @@ const app = Effect.gen(function* () {
   // with Effect.fork so the main fiber can continue setting up DOM interactions.
   yield* ws.messages.pipe(
     Stream.mapEffect((event) =>
-      // MessageEvent.data may be a string or binary; we treat it as a string here.
-      Ref.update(messages, (msgs) => [...msgs, event.data as string]),
+      // MessageEvent.data may be string | ArrayBuffer | Blob; this demo only
+      // handles text frames, so non-string payloads are dropped.
+      typeof event.data === "string"
+        ? Ref.update(messages, (msgs) => [...msgs, event.data as string])
+        : Effect.void,
     ),
     Stream.runDrain,
     // Fork so message accumulation runs concurrently with outgoing sends and rendering.

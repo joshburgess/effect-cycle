@@ -12,56 +12,72 @@ import * as HttpClient from "@effect/platform/HttpClient"
  */
 import type * as HttpClientError from "@effect/platform/HttpClientError"
 import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
-import { Effect, Queue, Ref, Schema, type Scope, Stream } from "effect"
+import { Data, Effect, Queue, Ref, Schema, type Scope, Stream } from "effect"
 import { DOMSink, DOMSource } from "effect-cycle-dom"
 import { RouterSink, RouterSource, matchPath } from "effect-cycle-router"
 
 // ---------------------------------------------------------------------------
-// Domain types
+// Domain schemas (validate API responses at the boundary)
 // ---------------------------------------------------------------------------
 
-interface User {
-  readonly email: string
-  readonly token: string
-  readonly username: string
-  readonly bio: string | null
-  readonly image: string | null
-}
+const AuthorSchema = Schema.Struct({
+  username: Schema.String,
+  bio: Schema.NullOr(Schema.String),
+  image: Schema.NullOr(Schema.String),
+  following: Schema.Boolean,
+})
 
-interface Author {
-  readonly username: string
-  readonly bio: string | null
-  readonly image: string | null
-  readonly following: boolean
-}
+const UserSchema = Schema.Struct({
+  email: Schema.String,
+  token: Schema.String,
+  username: Schema.String,
+  bio: Schema.NullOr(Schema.String),
+  image: Schema.NullOr(Schema.String),
+})
 
-interface Article {
-  readonly slug: string
-  readonly title: string
-  readonly description: string
-  readonly body: string
-  readonly tagList: ReadonlyArray<string>
-  readonly createdAt: string
-  readonly updatedAt: string
-  readonly favorited: boolean
-  readonly favoritesCount: number
-  readonly author: Author
-}
+const ArticleSchema = Schema.Struct({
+  slug: Schema.String,
+  title: Schema.String,
+  description: Schema.String,
+  body: Schema.String,
+  tagList: Schema.Array(Schema.String),
+  createdAt: Schema.String,
+  updatedAt: Schema.String,
+  favorited: Schema.Boolean,
+  favoritesCount: Schema.Number,
+  author: AuthorSchema,
+})
 
-interface Comment {
-  readonly id: number
-  readonly createdAt: string
-  readonly updatedAt: string
-  readonly body: string
-  readonly author: Author
-}
+const CommentSchema = Schema.Struct({
+  id: Schema.Number,
+  createdAt: Schema.String,
+  updatedAt: Schema.String,
+  body: Schema.String,
+  author: AuthorSchema,
+})
 
-interface Profile {
-  readonly username: string
-  readonly bio: string | null
-  readonly image: string | null
-  readonly following: boolean
-}
+const ProfileSchema = Schema.Struct({
+  username: Schema.String,
+  bio: Schema.NullOr(Schema.String),
+  image: Schema.NullOr(Schema.String),
+  following: Schema.Boolean,
+})
+
+type Author = Schema.Schema.Type<typeof AuthorSchema>
+type User = Schema.Schema.Type<typeof UserSchema>
+type Article = Schema.Schema.Type<typeof ArticleSchema>
+type Comment = Schema.Schema.Type<typeof CommentSchema>
+type Profile = Schema.Schema.Type<typeof ProfileSchema>
+
+const SingleUserResponse = Schema.Struct({ user: UserSchema })
+const SingleArticleResponse = Schema.Struct({ article: ArticleSchema })
+const MultipleArticlesResponse = Schema.Struct({
+  articles: Schema.Array(ArticleSchema),
+  articlesCount: Schema.Number,
+})
+const TagsResponse = Schema.Struct({ tags: Schema.Array(Schema.String) })
+const SingleProfileResponse = Schema.Struct({ profile: ProfileSchema })
+const MultipleCommentsResponse = Schema.Struct({ comments: Schema.Array(CommentSchema) })
 
 // ---------------------------------------------------------------------------
 // Actions
@@ -222,42 +238,101 @@ type Client = HttpClient.HttpClient.With<
   Scope.Scope
 >
 
-type ApiError = HttpClientError.HttpClientError | HttpClientError.ResponseError
+class ApiDecodeError extends Data.TaggedError("ApiDecodeError")<{
+  readonly url: string
+  readonly message: string
+}> {}
 
-const apiGet = (client: Client, url: string, token: string | null) => {
+type ApiError = HttpClientError.HttpClientError | HttpClientError.ResponseError | ApiDecodeError
+
+const decodeBody =
+  <A, I>(schema: Schema.Schema<A, I>, url: string) =>
+  (json: unknown): Effect.Effect<A, ApiDecodeError> =>
+    Schema.decodeUnknown(schema)(json).pipe(
+      Effect.mapError((cause) => new ApiDecodeError({ url, message: String(cause) })),
+    )
+
+const apiGet = <A, I>(
+  client: Client,
+  url: string,
+  token: string | null,
+  schema: Schema.Schema<A, I>,
+): Effect.Effect<A, ApiError> => {
   const req = HttpClientRequest.get(url)
   const authed = token ? HttpClientRequest.bearerToken(req, token) : req
   return client.execute(authed).pipe(
     Effect.flatMap((res) => res.json),
+    Effect.flatMap(decodeBody(schema, url)),
     Effect.scoped,
-  ) as Effect.Effect<unknown, ApiError>
+  )
 }
 
-const apiPost = (client: Client, url: string, body: unknown, token: string | null) => {
+const apiPost = <A, I>(
+  client: Client,
+  url: string,
+  body: unknown,
+  token: string | null,
+  schema: Schema.Schema<A, I>,
+): Effect.Effect<A, ApiError> => {
   const req = HttpClientRequest.post(url).pipe(HttpClientRequest.bodyUnsafeJson(body))
   const authed = token ? HttpClientRequest.bearerToken(req, token) : req
   return client.execute(authed).pipe(
     Effect.flatMap((res) => res.json),
+    Effect.flatMap(decodeBody(schema, url)),
     Effect.scoped,
-  ) as Effect.Effect<unknown, ApiError>
+  )
 }
 
-const apiPut = (client: Client, url: string, body: unknown, token: string | null) => {
+const apiPostVoid = (
+  client: Client,
+  url: string,
+  body: unknown,
+  token: string | null,
+): Effect.Effect<void, ApiError> => {
+  const req = HttpClientRequest.post(url).pipe(HttpClientRequest.bodyUnsafeJson(body))
+  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
+  return client.execute(authed).pipe(Effect.asVoid, Effect.scoped)
+}
+
+const apiPut = <A, I>(
+  client: Client,
+  url: string,
+  body: unknown,
+  token: string | null,
+  schema: Schema.Schema<A, I>,
+): Effect.Effect<A, ApiError> => {
   const req = HttpClientRequest.put(url).pipe(HttpClientRequest.bodyUnsafeJson(body))
   const authed = token ? HttpClientRequest.bearerToken(req, token) : req
   return client.execute(authed).pipe(
     Effect.flatMap((res) => res.json),
+    Effect.flatMap(decodeBody(schema, url)),
     Effect.scoped,
-  ) as Effect.Effect<unknown, ApiError>
+  )
 }
 
-const apiDelete = (client: Client, url: string, token: string | null) => {
+const apiDelete = <A, I>(
+  client: Client,
+  url: string,
+  token: string | null,
+  schema: Schema.Schema<A, I>,
+): Effect.Effect<A, ApiError> => {
   const req = HttpClientRequest.del(url)
   const authed = token ? HttpClientRequest.bearerToken(req, token) : req
   return client.execute(authed).pipe(
     Effect.flatMap((res) => res.json),
+    Effect.flatMap(decodeBody(schema, url)),
     Effect.scoped,
-  ) as Effect.Effect<unknown, ApiError>
+  )
+}
+
+const apiDeleteVoid = (
+  client: Client,
+  url: string,
+  token: string | null,
+): Effect.Effect<void, ApiError> => {
+  const req = HttpClientRequest.del(url)
+  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
+  return client.execute(authed).pipe(Effect.asVoid, Effect.scoped)
 }
 
 // Parse error messages from API error responses
@@ -283,6 +358,9 @@ const flattenErrorBody = (
 }
 
 const parseErrors = (err: ApiError): ReadonlyArray<string> => {
+  if (err._tag === "ApiDecodeError") {
+    return ["Server response could not be decoded."]
+  }
   if (err._tag === "ResponseError") {
     if (err.response.status === 401) return ["Unauthorized. Please sign in again."]
     if (err.response.status === 403) return ["Forbidden. You don't have permission."]
@@ -338,12 +416,13 @@ const handleAction = (
   client: Client,
   actions: Queue.Queue<Action>,
   routerSink: RouterSink["Type"],
+  scope: Scope.Scope,
 ): Effect.Effect<void> => {
   const getToken = (): Effect.Effect<string | null> =>
     Ref.get(refs.user).pipe(Effect.map((u) => (u ? u.token : null)))
 
   const forkApi = (eff: Effect.Effect<void>): Effect.Effect<void> =>
-    Effect.fork(eff).pipe(Effect.asVoid)
+    Effect.forkIn(scope)(eff).pipe(Effect.asVoid)
 
   switch (action.type) {
     case "route-changed": {
@@ -366,8 +445,12 @@ const handleAction = (
           yield* Ref.set(refs.activeTag, null)
           yield* forkApi(
             Effect.gen(function* () {
-              const json = yield* apiGet(client, "/api/articles?limit=20", token)
-              const data = json as { articles: Article[]; articlesCount: number }
+              const data = yield* apiGet(
+                client,
+                "/api/articles?limit=20",
+                token,
+                MultipleArticlesResponse,
+              )
               yield* Queue.offer(actions, {
                 type: "articles-loaded",
                 articles: data.articles,
@@ -382,10 +465,17 @@ const handleAction = (
           )
           yield* forkApi(
             Effect.gen(function* () {
-              const json = yield* apiGet(client, "/api/tags", token)
-              const data = json as { tags: string[] }
+              const data = yield* apiGet(client, "/api/tags", token, TagsResponse)
               yield* Queue.offer(actions, { type: "tags-loaded", tags: data.tags })
             }).pipe(
+              Effect.tapError((err) =>
+                Effect.logWarning("API call failed").pipe(
+                  Effect.annotateLogs({
+                    context: "load-tags",
+                    message: parseErrors(err)[0] ?? "",
+                  }),
+                ),
+              ),
               Effect.catchAll(() => Effect.void),
               Effect.asVoid,
             ),
@@ -395,8 +485,12 @@ const handleAction = (
           const slug = editorMatch["slug"]!
           yield* forkApi(
             Effect.gen(function* () {
-              const json = yield* apiGet(client, `/api/articles/${encodeURIComponent(slug)}`, token)
-              const data = json as { article: Article }
+              const data = yield* apiGet(
+                client,
+                `/api/articles/${encodeURIComponent(slug)}`,
+                token,
+                SingleArticleResponse,
+              )
               yield* Ref.set(refs.editingArticle, data.article)
               yield* Ref.set(refs.loading, false)
             }).pipe(
@@ -413,8 +507,12 @@ const handleAction = (
           const slug = articleMatch["slug"]!
           yield* forkApi(
             Effect.gen(function* () {
-              const json = yield* apiGet(client, `/api/articles/${encodeURIComponent(slug)}`, token)
-              const data = json as { article: Article }
+              const data = yield* apiGet(
+                client,
+                `/api/articles/${encodeURIComponent(slug)}`,
+                token,
+                SingleArticleResponse,
+              )
               yield* Queue.offer(actions, { type: "article-loaded", article: data.article })
             }).pipe(
               Effect.catchAll((err) => handleApiError(err, refs, actions, "Article not found")),
@@ -423,14 +521,22 @@ const handleAction = (
           )
           yield* forkApi(
             Effect.gen(function* () {
-              const json = yield* apiGet(
+              const data = yield* apiGet(
                 client,
                 `/api/articles/${encodeURIComponent(slug)}/comments`,
                 token,
+                MultipleCommentsResponse,
               )
-              const data = json as { comments: Comment[] }
               yield* Queue.offer(actions, { type: "comments-loaded", comments: data.comments })
             }).pipe(
+              Effect.tapError((err) =>
+                Effect.logWarning("API call failed").pipe(
+                  Effect.annotateLogs({
+                    context: "load-comments",
+                    message: parseErrors(err)[0] ?? "",
+                  }),
+                ),
+              ),
               Effect.catchAll(() => Effect.void),
               Effect.asVoid,
             ),
@@ -442,12 +548,12 @@ const handleAction = (
           const username = isFavorites ? rest.slice(0, -"/favorites".length) : rest
           yield* forkApi(
             Effect.gen(function* () {
-              const json = yield* apiGet(
+              const data = yield* apiGet(
                 client,
                 `/api/profiles/${encodeURIComponent(username)}`,
                 token,
+                SingleProfileResponse,
               )
-              const data = json as { profile: Profile }
               yield* Queue.offer(actions, { type: "profile-loaded", profile: data.profile })
             }).pipe(
               Effect.catchAll((err) => handleApiError(err, refs, actions, "Profile not found")),
@@ -459,14 +565,21 @@ const handleAction = (
             : `/api/articles?author=${encodeURIComponent(username)}&limit=20`
           yield* forkApi(
             Effect.gen(function* () {
-              const json = yield* apiGet(client, articlesUrl, token)
-              const data = json as { articles: Article[]; articlesCount: number }
+              const data = yield* apiGet(client, articlesUrl, token, MultipleArticlesResponse)
               yield* Queue.offer(actions, {
                 type: "profile-articles-loaded",
                 articles: data.articles,
                 count: data.articlesCount,
               })
             }).pipe(
+              Effect.tapError((err) =>
+                Effect.logWarning("API call failed").pipe(
+                  Effect.annotateLogs({
+                    context: "load-profile-articles",
+                    message: parseErrors(err)[0] ?? "",
+                  }),
+                ),
+              ),
               Effect.catchAll(() => Effect.void),
               Effect.asVoid,
             ),
@@ -485,13 +598,13 @@ const handleAction = (
         yield* Ref.set(refs.errors, [])
         yield* forkApi(
           Effect.gen(function* () {
-            const json = yield* apiPost(
+            const data = yield* apiPost(
               client,
               "/api/users/login",
               { user: { email: action.email, password: action.password } },
               null,
+              SingleUserResponse,
             )
-            const data = json as { user: User }
             yield* Queue.offer(actions, { type: "user-loaded", user: data.user })
           }).pipe(
             Effect.catchAll((err) => {
@@ -510,7 +623,7 @@ const handleAction = (
         yield* Ref.set(refs.errors, [])
         yield* forkApi(
           Effect.gen(function* () {
-            const json = yield* apiPost(
+            const data = yield* apiPost(
               client,
               "/api/users",
               {
@@ -521,8 +634,8 @@ const handleAction = (
                 },
               },
               null,
+              SingleUserResponse,
             )
-            const data = json as { user: User }
             yield* Queue.offer(actions, { type: "user-loaded", user: data.user })
           }).pipe(
             Effect.catchAll((err) => {
@@ -556,8 +669,7 @@ const handleAction = (
         if (action.password) user["password"] = action.password
         yield* forkApi(
           Effect.gen(function* () {
-            const json = yield* apiPut(client, "/api/user", { user }, token)
-            const data = json as { user: User }
+            const data = yield* apiPut(client, "/api/user", { user }, token, SingleUserResponse)
             yield* Queue.offer(actions, { type: "user-loaded", user: data.user })
           }).pipe(
             Effect.catchAll((err) => {
@@ -585,8 +697,7 @@ const handleAction = (
               : "/api/articles?limit=20"
         yield* forkApi(
           Effect.gen(function* () {
-            const json = yield* apiGet(client, url, token)
-            const data = json as { articles: Article[]; articlesCount: number }
+            const data = yield* apiGet(client, url, token, MultipleArticlesResponse)
             yield* Queue.offer(actions, {
               type: "articles-loaded",
               articles: data.articles,
@@ -605,13 +716,13 @@ const handleAction = (
         const token = yield* getToken()
         yield* forkApi(
           Effect.gen(function* () {
-            const json = yield* apiPost(
+            const data = yield* apiPost(
               client,
               `/api/articles/${encodeURIComponent(action.slug)}/favorite`,
               {},
               token,
+              SingleArticleResponse,
             )
-            const data = json as { article: Article }
             yield* Ref.update(refs.articles, (arts) =>
               arts.map((a) => (a.slug === data.article.slug ? data.article : a)),
             )
@@ -620,6 +731,14 @@ const handleAction = (
               yield* Ref.set(refs.article, data.article)
             }
           }).pipe(
+            Effect.tapError((err) =>
+              Effect.logWarning("API call failed").pipe(
+                Effect.annotateLogs({
+                  context: "favorite",
+                  message: parseErrors(err)[0] ?? "",
+                }),
+              ),
+            ),
             Effect.catchAll(() => Effect.void),
             Effect.asVoid,
           ),
@@ -632,12 +751,12 @@ const handleAction = (
         const token = yield* getToken()
         yield* forkApi(
           Effect.gen(function* () {
-            const json = yield* apiDelete(
+            const data = yield* apiDelete(
               client,
               `/api/articles/${encodeURIComponent(action.slug)}/favorite`,
               token,
+              SingleArticleResponse,
             )
-            const data = json as { article: Article }
             yield* Ref.update(refs.articles, (arts) =>
               arts.map((a) => (a.slug === data.article.slug ? data.article : a)),
             )
@@ -646,6 +765,14 @@ const handleAction = (
               yield* Ref.set(refs.article, data.article)
             }
           }).pipe(
+            Effect.tapError((err) =>
+              Effect.logWarning("API call failed").pipe(
+                Effect.annotateLogs({
+                  context: "unfavorite",
+                  message: parseErrors(err)[0] ?? "",
+                }),
+              ),
+            ),
             Effect.catchAll(() => Effect.void),
             Effect.asVoid,
           ),
@@ -658,15 +785,23 @@ const handleAction = (
         const token = yield* getToken()
         yield* forkApi(
           Effect.gen(function* () {
-            const json = yield* apiPost(
+            const data = yield* apiPost(
               client,
               `/api/profiles/${encodeURIComponent(action.username)}/follow`,
               {},
               token,
+              SingleProfileResponse,
             )
-            const data = json as { profile: Profile }
             yield* Queue.offer(actions, { type: "profile-loaded", profile: data.profile })
           }).pipe(
+            Effect.tapError((err) =>
+              Effect.logWarning("API call failed").pipe(
+                Effect.annotateLogs({
+                  context: "follow",
+                  message: parseErrors(err)[0] ?? "",
+                }),
+              ),
+            ),
             Effect.catchAll(() => Effect.void),
             Effect.asVoid,
           ),
@@ -679,14 +814,22 @@ const handleAction = (
         const token = yield* getToken()
         yield* forkApi(
           Effect.gen(function* () {
-            const json = yield* apiDelete(
+            const data = yield* apiDelete(
               client,
               `/api/profiles/${encodeURIComponent(action.username)}/follow`,
               token,
+              SingleProfileResponse,
             )
-            const data = json as { profile: Profile }
             yield* Queue.offer(actions, { type: "profile-loaded", profile: data.profile })
           }).pipe(
+            Effect.tapError((err) =>
+              Effect.logWarning("API call failed").pipe(
+                Effect.annotateLogs({
+                  context: "unfollow",
+                  message: parseErrors(err)[0] ?? "",
+                }),
+              ),
+            ),
             Effect.catchAll(() => Effect.void),
             Effect.asVoid,
           ),
@@ -699,20 +842,28 @@ const handleAction = (
         const token = yield* getToken()
         yield* forkApi(
           Effect.gen(function* () {
-            yield* apiPost(
+            yield* apiPostVoid(
               client,
               `/api/articles/${encodeURIComponent(action.slug)}/comments`,
               { comment: { body: action.body } },
               token,
             )
-            const commentsJson = yield* apiGet(
+            const data = yield* apiGet(
               client,
               `/api/articles/${encodeURIComponent(action.slug)}/comments`,
               token,
+              MultipleCommentsResponse,
             )
-            const data = commentsJson as { comments: Comment[] }
             yield* Queue.offer(actions, { type: "comments-loaded", comments: data.comments })
           }).pipe(
+            Effect.tapError((err) =>
+              Effect.logWarning("API call failed").pipe(
+                Effect.annotateLogs({
+                  context: "add-comment",
+                  message: parseErrors(err)[0] ?? "",
+                }),
+              ),
+            ),
             Effect.catchAll(() => Effect.void),
             Effect.asVoid,
           ),
@@ -725,13 +876,21 @@ const handleAction = (
         const token = yield* getToken()
         yield* forkApi(
           Effect.gen(function* () {
-            yield* apiDelete(
+            yield* apiDeleteVoid(
               client,
               `/api/articles/${encodeURIComponent(action.slug)}/comments/${action.id}`,
               token,
             )
             yield* Ref.update(refs.comments, (cs) => cs.filter((c) => c.id !== action.id))
           }).pipe(
+            Effect.tapError((err) =>
+              Effect.logWarning("API call failed").pipe(
+                Effect.annotateLogs({
+                  context: "delete-comment",
+                  message: parseErrors(err)[0] ?? "",
+                }),
+              ),
+            ),
             Effect.catchAll(() => Effect.void),
             Effect.asVoid,
           ),
@@ -750,7 +909,7 @@ const handleAction = (
           .filter((t) => t.length > 0)
         yield* forkApi(
           Effect.gen(function* () {
-            const json = yield* apiPost(
+            const data = yield* apiPost(
               client,
               "/api/articles",
               {
@@ -762,8 +921,8 @@ const handleAction = (
                 },
               },
               token,
+              SingleArticleResponse,
             )
-            const data = json as { article: Article }
             yield* Ref.set(refs.loading, false)
             yield* routerSink.push(`/article/${data.article.slug}`).pipe(Effect.orDie)
           }).pipe(
@@ -787,7 +946,7 @@ const handleAction = (
         const token = yield* getToken()
         yield* forkApi(
           Effect.gen(function* () {
-            const json = yield* apiPut(
+            const data = yield* apiPut(
               client,
               `/api/articles/${encodeURIComponent(action.slug)}`,
               {
@@ -798,8 +957,8 @@ const handleAction = (
                 },
               },
               token,
+              SingleArticleResponse,
             )
-            const data = json as { article: Article }
             yield* Ref.set(refs.loading, false)
             yield* routerSink.push(`/article/${data.article.slug}`).pipe(Effect.orDie)
           }).pipe(
@@ -820,9 +979,17 @@ const handleAction = (
         const token = yield* getToken()
         yield* forkApi(
           Effect.gen(function* () {
-            yield* apiDelete(client, `/api/articles/${encodeURIComponent(action.slug)}`, token)
+            yield* apiDeleteVoid(client, `/api/articles/${encodeURIComponent(action.slug)}`, token)
             yield* routerSink.push("/").pipe(Effect.orDie)
           }).pipe(
+            Effect.tapError((err) =>
+              Effect.logWarning("API call failed").pipe(
+                Effect.annotateLogs({
+                  context: "delete-article",
+                  message: parseErrors(err)[0] ?? "",
+                }),
+              ),
+            ),
             Effect.catchAll(() => Effect.void),
             Effect.asVoid,
           ),
@@ -850,8 +1017,7 @@ const handleAction = (
             : `/api/articles?author=${encodeURIComponent(username)}&limit=20&offset=${offset}`
           yield* forkApi(
             Effect.gen(function* () {
-              const json = yield* apiGet(client, url, token)
-              const data = json as { articles: Article[]; articlesCount: number }
+              const data = yield* apiGet(client, url, token, MultipleArticlesResponse)
               yield* Queue.offer(actions, {
                 type: "profile-articles-loaded",
                 articles: data.articles,
@@ -874,8 +1040,7 @@ const handleAction = (
                 : `/api/articles?limit=20&offset=${offset}`
           yield* forkApi(
             Effect.gen(function* () {
-              const json = yield* apiGet(client, url, token)
-              const data = json as { articles: Article[]; articlesCount: number }
+              const data = yield* apiGet(client, url, token, MultipleArticlesResponse)
               yield* Queue.offer(actions, {
                 type: "articles-loaded",
                 articles: data.articles,
@@ -1373,6 +1538,7 @@ const renderApp = (state: AppState): string =>
 // ---------------------------------------------------------------------------
 
 const app = Effect.gen(function* () {
+  const scope = yield* Effect.scope
   const dom = yield* DOMSource
   const sink = yield* DOMSink
   const router = yield* RouterSource
@@ -1408,25 +1574,21 @@ const app = Effect.gen(function* () {
   yield* Effect.gen(function* () {
     const saved = yield* Effect.sync(() => localStorage.getItem("conduit-token"))
     if (saved) {
-      yield* Effect.fork(
-        Effect.gen(function* () {
-          const json = yield* apiGet(client, "/api/user", saved)
-          const data = json as { user: User }
-          yield* Queue.offer(actions, { type: "user-loaded", user: data.user })
-        }).pipe(
-          Effect.catchAll(() => Effect.sync(() => localStorage.removeItem("conduit-token"))),
-          Effect.asVoid,
-        ),
+      yield* Effect.gen(function* () {
+        const data = yield* apiGet(client, "/api/user", saved, SingleUserResponse)
+        yield* Queue.offer(actions, { type: "user-loaded", user: data.user })
+      }).pipe(
+        Effect.catchAll(() => Effect.sync(() => localStorage.removeItem("conduit-token"))),
+        Effect.asVoid,
+        Effect.forkIn(scope),
       )
     }
   })
 
   // Listen to route changes
-  yield* Effect.fork(
-    Stream.runForEach(router.location$, (loc) =>
-      Queue.offer(actions, { type: "route-changed", path: loc.path }),
-    ),
-  )
+  yield* Stream.runForEach(router.location$, (loc) =>
+    Queue.offer(actions, { type: "route-changed", path: loc.path }),
+  ).pipe(Effect.forkIn(scope))
 
   // Event delegation
   const root = yield* dom.element
@@ -1557,7 +1719,7 @@ const app = Effect.gen(function* () {
   const vdom$: Stream.Stream<string> = Stream.concat(
     Stream.make(undefined as undefined),
     Stream.fromQueue(actions).pipe(
-      Stream.tap((action) => handleAction(action, refs, client, actions, routerSink)),
+      Stream.tap((action) => handleAction(action, refs, client, actions, routerSink, scope)),
     ),
   ).pipe(
     Stream.mapEffect(() => readState(refs)),
@@ -1566,6 +1728,6 @@ const app = Effect.gen(function* () {
 
   yield* sink.render(vdom$)
   yield* Effect.never
-})
+}).pipe(Effect.scoped)
 
 export default app
