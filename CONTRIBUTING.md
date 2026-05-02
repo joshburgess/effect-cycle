@@ -4,15 +4,8 @@
 
 - **Node.js** >= 22
 - **pnpm** >= 9
-- **aeon** FRP library cloned as a sibling directory
 
-The `dom` and `http` packages depend on [aeon](https://github.com/joshburgess/aeon) via local `link:` references. Clone it next to `effect-cycle`:
-
-```
-parent/
-  aeon/           # git clone <aeon-repo> && pnpm install && pnpm build
-  effect-cycle/   # this repo
-```
+The `dom` and `http` packages depend on [aeon](https://github.com/joshburgess/aeon), which is published to npm and pulled in via `pnpm install`.
 
 ## Setup
 

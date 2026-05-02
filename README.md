@@ -268,15 +268,10 @@ See [DESIGN.md](DESIGN.md) for the full design document covering the Layer archi
 
 - Node.js >= 22
 - pnpm >= 9
-- The [aeon](https://github.com/joshburgess/aeon) FRP library cloned as a sibling directory (the `dom` and `http` packages link to it via `link:../../../aeon/packages/*`)
 
 ### Setup
 
 ```bash
-# Clone aeon as a sibling (required for local development)
-git clone <aeon-repo-url> ../aeon
-cd ../aeon && pnpm install && pnpm build && cd -
-
 git clone <repo-url>
 cd effect-cycle
 pnpm install

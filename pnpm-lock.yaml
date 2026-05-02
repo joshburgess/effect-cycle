@@ -216,20 +216,20 @@ importers:
   packages/dom:
     dependencies:
       aeon-core:
-        specifier: link:../../../aeon/packages/core
-        version: link:../../../aeon/packages/core
+        specifier: ^0.3.1
+        version: 0.3.1(aeon-types@0.2.0)
       aeon-dom:
-        specifier: link:../../../aeon/packages/dom
-        version: link:../../../aeon/packages/dom
+        specifier: ^0.3.0
+        version: 0.3.0(aeon-core@0.3.1(aeon-types@0.2.0))(aeon-types@0.2.0)
       aeon-effect:
-        specifier: link:../../../aeon/packages/effect
-        version: link:../../../aeon/packages/effect
+        specifier: ^0.2.0
+        version: 0.2.0(@effect/typeclass@0.40.0(effect@3.21.0))(aeon-core@0.3.1(aeon-types@0.2.0))(aeon-types@0.2.0)(effect@3.21.0)
       aeon-scheduler:
-        specifier: link:../../../aeon/packages/scheduler
-        version: link:../../../aeon/packages/scheduler
+        specifier: ^0.3.0
+        version: 0.3.0
       aeon-types:
-        specifier: link:../../../aeon/packages/types
-        version: link:../../../aeon/packages/types
+        specifier: ^0.2.0
+        version: 0.2.0
       morphdom:
         specifier: ^2.7.0
         version: 2.7.8
@@ -247,17 +247,17 @@ importers:
   packages/http:
     dependencies:
       aeon-core:
-        specifier: link:../../../aeon/packages/core
-        version: link:../../../aeon/packages/core
+        specifier: ^0.3.1
+        version: 0.3.1(aeon-types@0.2.0)
       aeon-effect:
-        specifier: link:../../../aeon/packages/effect
-        version: link:../../../aeon/packages/effect
+        specifier: ^0.2.0
+        version: 0.2.0(@effect/typeclass@0.40.0(effect@3.21.0))(aeon-core@0.3.1(aeon-types@0.2.0))(aeon-types@0.2.0)(effect@3.21.0)
       aeon-scheduler:
-        specifier: link:../../../aeon/packages/scheduler
-        version: link:../../../aeon/packages/scheduler
+        specifier: ^0.3.0
+        version: 0.3.0
       aeon-types:
-        specifier: link:../../../aeon/packages/types
-        version: link:../../../aeon/packages/types
+        specifier: ^0.2.0
+        version: 0.2.0
     devDependencies:
       '@effect/platform':
         specifier: ^0.78.0
@@ -490,6 +490,11 @@ packages:
     resolution: {integrity: sha512-QJDGYLyYwH/K/LsCC0Ogx5bmjdC9NCzfrteT3GElQau6YK7TohcFmCxc4GVvukHEyuWWgHeWYAkl9LNMGyci0A==}
     peerDependencies:
       effect: ^3.13.8
+
+  '@effect/typeclass@0.40.0':
+    resolution: {integrity: sha512-L/2o2ImeqbemFlqH0b3y2PqQTFc+E0/DUnffCU8bkJUGh0yUZmh2RXuXhR8QOpfNCe718JQjI+mLnpVF2MMmaQ==}
+    peerDependencies:
+      effect: ^3.21.0
 
   '@effect/vitest@0.29.0':
     resolution: {integrity: sha512-DvWr1aeEcaZ8mtu8hNVb4e3rEYvGEwQSr7wsNrW53t6nKYjkmjRICcvVEsXUhjoCblRHSxRsRV0TOt0+UmcvaQ==}
@@ -1220,6 +1225,31 @@ packages:
 
   '@vitest/utils@3.2.4':
     resolution: {integrity: sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA==}
+
+  aeon-core@0.3.1:
+    resolution: {integrity: sha512-w4KL+9bgjpo88s6V1M5MtEOXbnUwEe0icZu2PuZ1CwqiXkaF0XM90ZQE/UyZMpQQvdg8y6/Q5Np5FArCg+hZWw==}
+    peerDependencies:
+      aeon-types: workspace:^
+
+  aeon-dom@0.3.0:
+    resolution: {integrity: sha512-JPqudk0ykK3XdD+FWk0zGwk2/GxrIOZYM2q4Qz8rY0Dun+tdOttvqaZQLBGWI6Aus24VQNIwrmIB9ilDxfKmPw==}
+    peerDependencies:
+      aeon-core: ^0.3.0
+      aeon-types: ^0.2.0
+
+  aeon-effect@0.2.0:
+    resolution: {integrity: sha512-Sw9cbFhs7SsrDc5xIUb0rAjOGa7J1kLu19KrFQMM2ZmfqwAZfapI+rhTdpYxp/NdPtkkhO/FZiUkoQR8RqoaKw==}
+    peerDependencies:
+      '@effect/typeclass': ^0.40.0
+      aeon-core: ^0.3.0
+      aeon-types: ^0.2.0
+      effect: ^3.21.0
+
+  aeon-scheduler@0.3.0:
+    resolution: {integrity: sha512-UjXhCwl4eDLjRlxeaHPwKPJwyyqOmCOwwwmZfxWDEb5I6Rz2aut3UHu6PdbgU8HZgntpq0aHPyzwKo5ByZoc8A==}
+
+  aeon-types@0.2.0:
+    resolution: {integrity: sha512-0fFyBd8uErYR56/GJoyKneEErO4KWVYs5boUl9sUizZ7Y4h+TLviCAr7MlmuFRwJJnGAIWMaFjXER2VSRWooPA==}
 
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
@@ -2294,6 +2324,10 @@ snapshots:
       find-my-way-ts: 0.1.6
       multipasta: 0.2.7
 
+  '@effect/typeclass@0.40.0(effect@3.21.0)':
+    dependencies:
+      effect: 3.21.0
+
   '@effect/vitest@0.29.0(effect@3.21.0)(vitest@3.2.4(@types/node@22.19.17)(jiti@2.6.1)(jsdom@25.0.1)(tsx@4.21.0))':
     dependencies:
       effect: 3.21.0
@@ -2783,6 +2817,28 @@ snapshots:
       '@vitest/pretty-format': 3.2.4
       loupe: 3.2.1
       tinyrainbow: 2.0.0
+
+  aeon-core@0.3.1(aeon-types@0.2.0):
+    dependencies:
+      aeon-types: 0.2.0
+
+  aeon-dom@0.3.0(aeon-core@0.3.1(aeon-types@0.2.0))(aeon-types@0.2.0):
+    dependencies:
+      aeon-core: 0.3.1(aeon-types@0.2.0)
+      aeon-types: 0.2.0
+
+  aeon-effect@0.2.0(@effect/typeclass@0.40.0(effect@3.21.0))(aeon-core@0.3.1(aeon-types@0.2.0))(aeon-types@0.2.0)(effect@3.21.0):
+    dependencies:
+      '@effect/typeclass': 0.40.0(effect@3.21.0)
+      aeon-core: 0.3.1(aeon-types@0.2.0)
+      aeon-types: 0.2.0
+      effect: 3.21.0
+
+  aeon-scheduler@0.3.0:
+    dependencies:
+      aeon-types: 0.2.0
+
+  aeon-types@0.2.0: {}
 
   agent-base@7.1.4: {}
 
