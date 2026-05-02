@@ -260,7 +260,7 @@ pnpm dev
 
 ## Architecture
 
-See [EFFECT_CYCLE.md](EFFECT_CYCLE.md) for the full design document covering the Layer architecture, driver pattern, error handling, and testing approach.
+See [DESIGN.md](DESIGN.md) for the full design document covering the Layer architecture, driver pattern, error handling, and testing approach.
 
 ## Development
 

@@ -123,4 +123,4 @@ Select the affected packages, choose the bump type, and write a summary. Commit 
 
 ## Design Reference
 
-See [EFFECT_CYCLE.md](EFFECT_CYCLE.md) for the full architecture and design decisions.
+See [DESIGN.md](DESIGN.md) for the full architecture and design decisions.
