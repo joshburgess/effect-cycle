@@ -81,7 +81,7 @@ const app = Effect.gen(function* () {
 
   const sendEvents$ = outgoing$.pipe(Stream.map((): void => undefined))
 
-  const trigger$ = Stream.mergeAll([wsEvents$, sendEvents$], { concurrency: "unbounded" })
+  const trigger$ = Stream.mergeAll([wsEvents$, sendEvents$], { concurrency: 2 })
 
   const vdom$ = trigger$.pipe(
     Stream.mapEffect(() => Ref.get(messages)),

@@ -81,7 +81,7 @@ const app = Effect.gen(function* () {
       ),
     )
 
-  const results$ = Stream.mergeAll([success$, errors$], { concurrency: "unbounded" })
+  const results$ = Stream.mergeAll([success$, errors$], { concurrency: 2 })
 
   // Render the result stream.  Each new response overwrites the previous output.
   yield* sink.render(results$)

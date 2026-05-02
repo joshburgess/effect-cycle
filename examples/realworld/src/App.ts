@@ -243,99 +243,18 @@ class ApiDecodeError extends Data.TaggedError("ApiDecodeError")<{
   readonly message: string
 }> {}
 
-type ApiError = HttpClientError.HttpClientError | HttpClientError.ResponseError | ApiDecodeError
+class ApiValidationError extends Data.TaggedError("ApiValidationError")<{
+  readonly status: number
+  readonly messages: ReadonlyArray<string>
+}> {}
 
-const decodeBody =
-  <A, I>(schema: Schema.Schema<A, I>, url: string) =>
-  (json: unknown): Effect.Effect<A, ApiDecodeError> =>
-    Schema.decodeUnknown(schema)(json).pipe(
-      Effect.mapError((cause) => new ApiDecodeError({ url, message: String(cause) })),
-    )
+type ApiError =
+  | HttpClientError.HttpClientError
+  | HttpClientError.ResponseError
+  | ApiDecodeError
+  | ApiValidationError
 
-const apiGet = <A, I>(
-  client: Client,
-  url: string,
-  token: string | null,
-  schema: Schema.Schema<A, I>,
-): Effect.Effect<A, ApiError> => {
-  const req = HttpClientRequest.get(url)
-  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
-  return client.execute(authed).pipe(
-    Effect.flatMap((res) => res.json),
-    Effect.flatMap(decodeBody(schema, url)),
-    Effect.scoped,
-  )
-}
-
-const apiPost = <A, I>(
-  client: Client,
-  url: string,
-  body: unknown,
-  token: string | null,
-  schema: Schema.Schema<A, I>,
-): Effect.Effect<A, ApiError> => {
-  const req = HttpClientRequest.post(url).pipe(HttpClientRequest.bodyUnsafeJson(body))
-  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
-  return client.execute(authed).pipe(
-    Effect.flatMap((res) => res.json),
-    Effect.flatMap(decodeBody(schema, url)),
-    Effect.scoped,
-  )
-}
-
-const apiPostVoid = (
-  client: Client,
-  url: string,
-  body: unknown,
-  token: string | null,
-): Effect.Effect<void, ApiError> => {
-  const req = HttpClientRequest.post(url).pipe(HttpClientRequest.bodyUnsafeJson(body))
-  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
-  return client.execute(authed).pipe(Effect.asVoid, Effect.scoped)
-}
-
-const apiPut = <A, I>(
-  client: Client,
-  url: string,
-  body: unknown,
-  token: string | null,
-  schema: Schema.Schema<A, I>,
-): Effect.Effect<A, ApiError> => {
-  const req = HttpClientRequest.put(url).pipe(HttpClientRequest.bodyUnsafeJson(body))
-  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
-  return client.execute(authed).pipe(
-    Effect.flatMap((res) => res.json),
-    Effect.flatMap(decodeBody(schema, url)),
-    Effect.scoped,
-  )
-}
-
-const apiDelete = <A, I>(
-  client: Client,
-  url: string,
-  token: string | null,
-  schema: Schema.Schema<A, I>,
-): Effect.Effect<A, ApiError> => {
-  const req = HttpClientRequest.del(url)
-  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
-  return client.execute(authed).pipe(
-    Effect.flatMap((res) => res.json),
-    Effect.flatMap(decodeBody(schema, url)),
-    Effect.scoped,
-  )
-}
-
-const apiDeleteVoid = (
-  client: Client,
-  url: string,
-  token: string | null,
-): Effect.Effect<void, ApiError> => {
-  const req = HttpClientRequest.del(url)
-  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
-  return client.execute(authed).pipe(Effect.asVoid, Effect.scoped)
-}
-
-// Parse error messages from API error responses
+// Conduit returns either { errors: { field: [msg] } } (422) or { message } (4xx/5xx).
 const ApiErrorBodySchema = Schema.Union(
   Schema.Struct({
     errors: Schema.Record({
@@ -357,36 +276,164 @@ const flattenErrorBody = (
   return [body.message]
 }
 
+// Upgrade a ResponseError into an ApiValidationError when the body parses as
+// the Conduit error envelope. Falls back to passing the ResponseError through.
+const enrichResponseError = (
+  err: HttpClientError.ResponseError,
+): Effect.Effect<never, HttpClientError.ResponseError | ApiValidationError> =>
+  Effect.gen(function* () {
+    const text = yield* err.response.text.pipe(Effect.orElseSucceed(() => ""))
+    if (!text) return yield* Effect.fail(err)
+    const parsed = yield* Effect.try({
+      try: () => JSON.parse(text) as unknown,
+      catch: () => err,
+    }).pipe(Effect.catchAll(() => Effect.fail(err)))
+    const decoded = yield* Schema.decodeUnknown(ApiErrorBodySchema)(parsed).pipe(
+      Effect.catchAll(() => Effect.fail(err)),
+    )
+    return yield* Effect.fail(
+      new ApiValidationError({
+        status: err.response.status,
+        messages: flattenErrorBody(decoded),
+      }),
+    )
+  })
+
+const decodeBody =
+  <A, I>(schema: Schema.Schema<A, I>, url: string) =>
+  (json: unknown): Effect.Effect<A, ApiDecodeError> =>
+    Schema.decodeUnknown(schema)(json).pipe(
+      Effect.mapError((cause) => new ApiDecodeError({ url, message: String(cause) })),
+    )
+
+const apiGet = <A, I>(
+  client: Client,
+  url: string,
+  token: string | null,
+  schema: Schema.Schema<A, I>,
+): Effect.Effect<A, ApiError> => {
+  const req = HttpClientRequest.get(url)
+  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
+  return client.execute(authed).pipe(
+    Effect.flatMap((res) => res.json),
+    Effect.flatMap(decodeBody(schema, url)),
+    Effect.catchTag("ResponseError", enrichResponseError),
+    Effect.scoped,
+    Effect.withSpan(`api.GET ${url}`),
+  )
+}
+
+const apiPost = <A, I>(
+  client: Client,
+  url: string,
+  body: unknown,
+  token: string | null,
+  schema: Schema.Schema<A, I>,
+): Effect.Effect<A, ApiError> => {
+  const req = HttpClientRequest.post(url).pipe(HttpClientRequest.bodyUnsafeJson(body))
+  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
+  return client.execute(authed).pipe(
+    Effect.flatMap((res) => res.json),
+    Effect.flatMap(decodeBody(schema, url)),
+    Effect.catchTag("ResponseError", enrichResponseError),
+    Effect.scoped,
+    Effect.withSpan(`api.POST ${url}`),
+  )
+}
+
+const apiPostVoid = (
+  client: Client,
+  url: string,
+  body: unknown,
+  token: string | null,
+): Effect.Effect<void, ApiError> => {
+  const req = HttpClientRequest.post(url).pipe(HttpClientRequest.bodyUnsafeJson(body))
+  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
+  return client
+    .execute(authed)
+    .pipe(
+      Effect.asVoid,
+      Effect.catchTag("ResponseError", enrichResponseError),
+      Effect.scoped,
+      Effect.withSpan(`api.POST ${url}`),
+    )
+}
+
+const apiPut = <A, I>(
+  client: Client,
+  url: string,
+  body: unknown,
+  token: string | null,
+  schema: Schema.Schema<A, I>,
+): Effect.Effect<A, ApiError> => {
+  const req = HttpClientRequest.put(url).pipe(HttpClientRequest.bodyUnsafeJson(body))
+  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
+  return client.execute(authed).pipe(
+    Effect.flatMap((res) => res.json),
+    Effect.flatMap(decodeBody(schema, url)),
+    Effect.catchTag("ResponseError", enrichResponseError),
+    Effect.scoped,
+    Effect.withSpan(`api.PUT ${url}`),
+  )
+}
+
+const apiDelete = <A, I>(
+  client: Client,
+  url: string,
+  token: string | null,
+  schema: Schema.Schema<A, I>,
+): Effect.Effect<A, ApiError> => {
+  const req = HttpClientRequest.del(url)
+  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
+  return client.execute(authed).pipe(
+    Effect.flatMap((res) => res.json),
+    Effect.flatMap(decodeBody(schema, url)),
+    Effect.catchTag("ResponseError", enrichResponseError),
+    Effect.scoped,
+    Effect.withSpan(`api.DELETE ${url}`),
+  )
+}
+
+const apiDeleteVoid = (
+  client: Client,
+  url: string,
+  token: string | null,
+): Effect.Effect<void, ApiError> => {
+  const req = HttpClientRequest.del(url)
+  const authed = token ? HttpClientRequest.bearerToken(req, token) : req
+  return client
+    .execute(authed)
+    .pipe(
+      Effect.asVoid,
+      Effect.catchTag("ResponseError", enrichResponseError),
+      Effect.scoped,
+      Effect.withSpan(`api.DELETE ${url}`),
+    )
+}
+
 const parseErrors = (err: ApiError): ReadonlyArray<string> => {
   if (err._tag === "ApiDecodeError") {
     return ["Server response could not be decoded."]
+  }
+  if (err._tag === "ApiValidationError") {
+    if (err.status === 401) return ["Unauthorized. Please sign in again."]
+    if (err.status === 403) return ["Forbidden. You don't have permission."]
+    if (err.status === 404) return ["Not found."]
+    return err.messages.length > 0 ? err.messages : ["An error occurred"]
   }
   if (err._tag === "ResponseError") {
     if (err.response.status === 401) return ["Unauthorized. Please sign in again."]
     if (err.response.status === 403) return ["Forbidden. You don't have permission."]
     if (err.response.status === 404) return ["Not found."]
+    if (err.message && err.message !== "non 2xx status code") return [err.message]
   }
-
-  // Try parsing message as a JSON error body. Decoded structure tells us
-  // which shape we got, so no `as` casts.
-  try {
-    const raw: unknown = JSON.parse(err.message)
-    const decoded = Schema.decodeUnknownEither(ApiErrorBodySchema)(raw)
-    if (decoded._tag === "Right") {
-      const parsed = flattenErrorBody(decoded.right)
-      if (parsed.length > 0) return parsed
-    }
-  } catch {
-    // not JSON: fall through
-  }
-
-  if (err.message && err.message !== "non 2xx status code") return [err.message]
   return ["An error occurred"]
 }
 
 // Check if an error is a 401 and clear token if so
 const is401 = (err: ApiError): boolean =>
-  err._tag === "ResponseError" && err.response.status === 401
+  (err._tag === "ResponseError" && err.response.status === 401) ||
+  (err._tag === "ApiValidationError" && err.status === 401)
 
 const handleApiError = (
   err: ApiError,

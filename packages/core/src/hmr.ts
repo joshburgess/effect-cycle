@@ -2,6 +2,15 @@ import { Effect, Fiber, type Layer, ManagedRuntime, Option, Ref } from "effect"
 import type { App } from "./App.js"
 
 /**
+ * Minimal subset of Vite's `import.meta.hot` interface used by {@link installHmr}.
+ * Declared here to avoid taking a hard dependency on Vite types from core.
+ */
+export interface HmrHook {
+  readonly accept: (cb: () => void) => void
+  readonly dispose: (cb: () => void) => void
+}
+
+/**
  * A runtime that supports hot module replacement.
  * Manages a single running fiber that can be interrupted and restarted
  * with new app code while preserving the driver layers.
@@ -53,3 +62,31 @@ export const makeHotRuntime = <R>(drivers: Layer.Layer<R>): Effect.Effect<HotRun
       }),
     }
   })
+
+/**
+ * Wires a {@link HotRuntime} to Vite's HMR hooks. Folds the four
+ * `Effect.runSync` calls (initial start, accept callback, dispose callback,
+ * and runtime construction) that every Vite-driven example would otherwise
+ * repeat.
+ *
+ * Pass `import.meta.hot` for the `hot` argument; production builds where
+ * `hot` is `undefined` will simply start the app once.
+ *
+ * @since 0.1.0
+ */
+export const installHmr = <R, E>(
+  drivers: Layer.Layer<R>,
+  app: App<void, E, R>,
+  hot: HmrHook | undefined,
+): void => {
+  const runtime = Effect.runSync(makeHotRuntime(drivers))
+  Effect.runSync(runtime.run(app))
+  if (hot) {
+    hot.accept(() => {
+      Effect.runSync(runtime.run(app))
+    })
+    hot.dispose(() => {
+      Effect.runSync(runtime.dispose)
+    })
+  }
+}

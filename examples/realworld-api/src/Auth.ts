@@ -38,6 +38,11 @@ export const AuthMiddlewareLive: Layer.Layer<AuthMiddleware, never, Store> = Lay
         Effect.gen(function* () {
           const raw = Redacted.value(token)
           const payload = yield* verifyToken(raw).pipe(
+            Effect.tapError((err) =>
+              Effect.logDebug("JWT verification failed").pipe(
+                Effect.annotateLogs({ reason: err.reason }),
+              ),
+            ),
             Effect.catchAll(() => Effect.fail(new HttpApiError.Unauthorized())),
           )
           const users = yield* Ref.get(store.users)

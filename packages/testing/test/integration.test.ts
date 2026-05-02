@@ -39,7 +39,7 @@ const counterApp = Effect.gen(function* () {
     .select(".decrement", "click")
     .pipe(Stream.tap(() => Ref.update(count, (n) => n - 1)))
 
-  const vdom$ = Stream.mergeAll([inc$, dec$], { concurrency: "unbounded" }).pipe(
+  const vdom$ = Stream.mergeAll([inc$, dec$], { concurrency: 2 }).pipe(
     Stream.mapEffect(() => Ref.get(count)),
     Stream.map((n) => `<div><h1>Count: ${n}</h1></div>`),
   )

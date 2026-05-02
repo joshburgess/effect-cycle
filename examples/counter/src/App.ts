@@ -37,7 +37,7 @@ const app = Effect.gen(function* () {
 
   // Stream.mergeAll fans-in both event streams into one.
   // After each interaction we read the current count and map it to HTML.
-  const vdom$ = Stream.mergeAll([inc$, dec$], { concurrency: "unbounded" }).pipe(
+  const vdom$ = Stream.mergeAll([inc$, dec$], { concurrency: 2 }).pipe(
     // After each click, read the latest count value from the Ref.
     Stream.mapEffect(() => Ref.get(count)),
     // Produce a VNode (HTML string) reflecting current state.

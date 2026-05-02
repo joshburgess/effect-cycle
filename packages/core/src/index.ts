@@ -1,7 +1,7 @@
 export type { App } from "./App.js"
 export { DriverInitError } from "./errors.js"
-export type { HotRuntime } from "./hmr.js"
-export { makeHotRuntime } from "./hmr.js"
+export type { HmrHook, HotRuntime } from "./hmr.js"
+export { installHmr, makeHotRuntime } from "./hmr.js"
 export {
   withEffectSpan,
   httpRequestCount,
