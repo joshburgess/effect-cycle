@@ -54,7 +54,7 @@ const instrumentWSSink: Layer.Layer<WSSink, never, WSSink | DevToolsConfig> = La
 )
 
 // -------------------------------------------------------------------------------------
-// instrumentWS — convenience merge
+// instrumentWS: convenience merge
 // -------------------------------------------------------------------------------------
 
 export const instrumentWS: Layer.Layer<

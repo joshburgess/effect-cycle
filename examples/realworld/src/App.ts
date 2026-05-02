@@ -1,6 +1,6 @@
 import * as HttpClient from "@effect/platform/HttpClient"
 /**
- * RealWorld (Conduit) -- effect-cycle frontend
+ * RealWorld (Conduit): effect-cycle frontend
  *
  * Full single-page app implementing the RealWorld spec:
  *   - Hash-based routing via RouterSource/RouterSink
@@ -12,7 +12,7 @@ import * as HttpClient from "@effect/platform/HttpClient"
  */
 import type * as HttpClientError from "@effect/platform/HttpClientError"
 import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
-import { Effect, Queue, Ref, type Scope, Stream } from "effect"
+import { Effect, Queue, Ref, Schema, type Scope, Stream } from "effect"
 import { DOMSink, DOMSource } from "effect-cycle-dom"
 import { RouterSink, RouterSource, matchPath } from "effect-cycle-router"
 
@@ -261,52 +261,54 @@ const apiDelete = (client: Client, url: string, token: string | null) => {
 }
 
 // Parse error messages from API error responses
-const parseErrors = (err: unknown): ReadonlyArray<string> => {
-  const tryParseBody = (raw: unknown): ReadonlyArray<string> | null => {
-    if (!raw || typeof raw !== "object") return null
-    const obj = raw as Record<string, unknown>
-    if ("errors" in obj && obj["errors"] && typeof obj["errors"] === "object") {
-      const errs = obj["errors"] as Record<string, ReadonlyArray<string>>
-      return Object.entries(errs).flatMap(([field, msgs]) =>
-        Array.isArray(msgs) ? msgs.map((m) => `${field} ${m}`) : [`${field} ${String(msgs)}`],
-      )
-    }
-    if ("message" in obj && typeof obj["message"] === "string") return [obj["message"]]
-    return null
+const ApiErrorBodySchema = Schema.Union(
+  Schema.Struct({
+    errors: Schema.Record({
+      key: Schema.String,
+      value: Schema.Union(Schema.Array(Schema.String), Schema.String),
+    }),
+  }),
+  Schema.Struct({ message: Schema.String }),
+)
+
+const flattenErrorBody = (
+  body: Schema.Schema.Type<typeof ApiErrorBodySchema>,
+): ReadonlyArray<string> => {
+  if ("errors" in body) {
+    return Object.entries(body.errors).flatMap(([field, msgs]) =>
+      Array.isArray(msgs) ? msgs.map((m) => `${field} ${m}`) : [`${field} ${msgs}`],
+    )
+  }
+  return [body.message]
+}
+
+const parseErrors = (err: ApiError): ReadonlyArray<string> => {
+  if (err._tag === "ResponseError") {
+    if (err.response.status === 401) return ["Unauthorized. Please sign in again."]
+    if (err.response.status === 403) return ["Forbidden. You don't have permission."]
+    if (err.response.status === 404) return ["Not found."]
   }
 
-  if (err && typeof err === "object") {
-    // ResponseError from @effect/platform has a response property
-    if ("response" in err) {
-      const resp = (err as { response: { status: number } }).response
-      if (resp && resp.status === 401) return ["Unauthorized. Please sign in again."]
-      if (resp && resp.status === 403) return ["Forbidden. You don't have permission."]
-      if (resp && resp.status === 404) return ["Not found."]
+  // Try parsing message as a JSON error body. Decoded structure tells us
+  // which shape we got, so no `as` casts.
+  try {
+    const raw: unknown = JSON.parse(err.message)
+    const decoded = Schema.decodeUnknownEither(ApiErrorBodySchema)(raw)
+    if (decoded._tag === "Right") {
+      const parsed = flattenErrorBody(decoded.right)
+      if (parsed.length > 0) return parsed
     }
-    // Try parsing the message field as JSON (error body)
-    if ("message" in err && typeof (err as { message: string }).message === "string") {
-      try {
-        const body = JSON.parse((err as { message: string }).message)
-        const parsed = tryParseBody(body)
-        if (parsed && parsed.length > 0) return parsed
-      } catch {
-        // Not JSON, use message directly
-        const msg = (err as { message: string }).message
-        if (msg && msg !== "non 2xx status code") return [msg]
-      }
-    }
+  } catch {
+    // not JSON: fall through
   }
+
+  if (err.message && err.message !== "non 2xx status code") return [err.message]
   return ["An error occurred"]
 }
 
 // Check if an error is a 401 and clear token if so
-const is401 = (err: unknown): boolean => {
-  if (err && typeof err === "object" && "response" in err) {
-    const resp = (err as { response: { status: number } }).response
-    return resp != null && resp.status === 401
-  }
-  return false
-}
+const is401 = (err: ApiError): boolean =>
+  err._tag === "ResponseError" && err.response.status === 401
 
 const handleApiError = (
   err: ApiError,
@@ -389,7 +391,7 @@ const handleAction = (
             ),
           )
         } else if (editorMatch) {
-          // Editing an existing article -- slug extracted by matchPath
+          // Editing an existing article (slug extracted by matchPath)
           const slug = editorMatch["slug"]!
           yield* forkApi(
             Effect.gen(function* () {
@@ -407,7 +409,7 @@ const handleAction = (
         } else if (path === "/editor") {
           yield* Ref.set(refs.loading, false)
         } else if (articleMatch) {
-          // View article -- slug extracted by matchPath
+          // View article (slug extracted by matchPath)
           const slug = articleMatch["slug"]!
           yield* forkApi(
             Effect.gen(function* () {
@@ -1400,7 +1402,7 @@ const app = Effect.gen(function* () {
 
   // Action bus
   const actions = yield* Queue.unbounded<Action>()
-  const offer = (action: Action) => Effect.runFork(Queue.offer(actions, action))
+  const offer = (action: Action) => Queue.unsafeOffer(actions, action)
 
   // Restore saved token and fetch current user
   yield* Effect.gen(function* () {

@@ -1,4 +1,4 @@
-import { type Context, Effect, Layer, Metric, Stream } from "effect"
+import { type Context, Effect, Layer, Metric } from "effect"
 
 // -------------------------------------------------------------------------------------
 // withEffectSpan
@@ -42,7 +42,7 @@ export const domRenderCount = Metric.counter("effect_cycle.dom.renders.total")
 export const routerNavCount = Metric.counter("effect_cycle.router.navigations.total")
 
 // -------------------------------------------------------------------------------------
-// instrumentService — generic service wrapper
+// instrumentService: generic service wrapper
 // -------------------------------------------------------------------------------------
 
 /**
@@ -78,16 +78,3 @@ export const instrumentService = <Id, Service extends object>(
       return patched
     }),
   )
-
-// -------------------------------------------------------------------------------------
-// Stream helpers (used by the pre-configured instrument layers below if adopted)
-// -------------------------------------------------------------------------------------
-
-/**
- * Taps a Stream to increment a Metric.Counter by 1 for each emission.
- * @internal
- */
-const tapCount = <A, E, R>(
-  stream: Stream.Stream<A, E, R>,
-  counter: Metric.Metric.Counter<number>,
-): Stream.Stream<A, E, R> => stream.pipe(Stream.tap(() => Metric.increment(counter)))

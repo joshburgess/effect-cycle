@@ -1,6 +1,6 @@
 import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 /**
- * HTTP Search example — debounced search with reactive HTTP requests.
+ * HTTP Search example: debounced search with reactive HTTP requests.
  *
  * Demonstrates the HTTPSink/HTTPSource cycle:
  *   1. User input events flow through DOMSource
@@ -46,15 +46,12 @@ const app = Effect.gen(function* () {
   )
 
   // Register the request stream with the HTTP driver under the "search" category.
-  // This Effect forks internally — it does not block the current fiber.
+  // This Effect forks internally; it does not block the current fiber.
   yield* http.request("search", req$)
 
-  // HTTPSource.response gives a Stream<HttpClientResponse, HTTPError> for the category.
-  // Stream.mapEffect lets us run an Effect per response (reading the text body).
-  // We handle errors at both levels:
-  //   - response.text errors (ResponseError) are caught with Effect.orElse
-  //   - HTTPError from the stream itself is caught with Stream.catchAll
-  const results$ = httpSource.response("search").pipe(
+  // HTTPSource.response gives a Stream<HttpClientResponse> for the category;
+  // failures are surfaced separately via httpSource.errors(category).
+  const success$ = httpSource.response("search").pipe(
     Stream.mapEffect((response) =>
       // .text is an Effect<string, ResponseError> defined on HttpIncomingMessage.
       response.text.pipe(
@@ -72,11 +69,19 @@ const app = Effect.gen(function* () {
         ),
       ),
     ),
-    // HTTPError (network failure, non-2xx status) stops the stream — recover to keep it alive.
-    Stream.catchAll(() =>
-      Stream.make(`<div class="results error">Search request failed. Please try again.</div>`),
-    ),
   )
+
+  // Render an error message whenever the driver reports a failure.
+  const errors$ = httpSource
+    .errors("search")
+    .pipe(
+      Stream.map(
+        (err) =>
+          `<div class="results error">Search request failed (status ${err.status}). Please try again.</div>`,
+      ),
+    )
+
+  const results$ = Stream.mergeAll([success$, errors$], { concurrency: "unbounded" })
 
   // Render the result stream.  Each new response overwrites the previous output.
   yield* sink.render(results$)

@@ -5,7 +5,7 @@
  * All crypto and time-reading operations are wrapped in Effect.
  */
 import { createHmac } from "node:crypto"
-import { Data, Effect, Option } from "effect"
+import { Data, Effect, Option, Schema } from "effect"
 
 const SECRET = "realworld-effect-cycle-secret"
 const ALGORITHM = "HS256"
@@ -19,7 +19,7 @@ export class JwtError extends Data.TaggedError("JwtError")<{
 }> {}
 
 // ---------------------------------------------------------------------------
-// Helpers (pure -- no side effects, no exceptions for valid input)
+// Helpers (pure: no side effects, no exceptions for valid input)
 // ---------------------------------------------------------------------------
 
 const base64url = (data: string): string => Buffer.from(data).toString("base64url")
@@ -30,15 +30,21 @@ const sign = (input: string): string =>
   createHmac("sha256", SECRET).update(input).digest("base64url")
 
 // ---------------------------------------------------------------------------
-// Public API
+// Schema (validates the decoded token payload)
 // ---------------------------------------------------------------------------
 
-export interface JwtPayload {
-  readonly sub: number
-  readonly username: string
-  readonly iat: number
-  readonly exp: number
-}
+export const JwtPayloadSchema = Schema.Struct({
+  sub: Schema.Number,
+  username: Schema.String,
+  iat: Schema.Number,
+  exp: Schema.Number,
+})
+
+export type JwtPayload = Schema.Schema.Type<typeof JwtPayloadSchema>
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
 
 export const createToken = (userId: number, username: string): Effect.Effect<string> =>
   Effect.sync(() => {
@@ -69,10 +75,14 @@ export const verifyToken = (token: string): Effect.Effect<JwtPayload, JwtError> 
       return yield* new JwtError({ reason: "Invalid signature" })
     }
 
-    const decoded = yield* Effect.try({
-      try: () => JSON.parse(base64urlDecode(payload)) as JwtPayload,
-      catch: () => new JwtError({ reason: "Invalid token payload" }),
+    const raw = yield* Effect.try({
+      try: () => JSON.parse(base64urlDecode(payload)) as unknown,
+      catch: () => new JwtError({ reason: "Invalid token JSON" }),
     })
+
+    const decoded = yield* Schema.decodeUnknown(JwtPayloadSchema)(raw).pipe(
+      Effect.mapError(() => new JwtError({ reason: "Invalid token payload" })),
+    )
 
     const now = yield* Effect.sync(() => Math.floor(Date.now() / 1000))
     if (decoded.exp < now) {
@@ -83,10 +93,16 @@ export const verifyToken = (token: string): Effect.Effect<JwtPayload, JwtError> 
 
 /**
  * Try to verify a token, returning Option.none() on failure instead of an error.
- * Useful for optional auth endpoints.
+ * Verification failures are logged at debug level so they remain observable
+ * without breaking the optional-auth happy path.
  */
 export const verifyTokenOptional = (token: string): Effect.Effect<Option.Option<JwtPayload>> =>
   verifyToken(token).pipe(
     Effect.map(Option.some),
+    Effect.tapError((error) =>
+      Effect.logDebug("Optional JWT verification failed").pipe(
+        Effect.annotateLogs({ reason: error.reason }),
+      ),
+    ),
     Effect.catchAll(() => Effect.succeed(Option.none())),
   )

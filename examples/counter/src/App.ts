@@ -1,17 +1,17 @@
 /**
- * Counter example — the simplest possible effect-cycle app.
+ * Counter example: the simplest possible effect-cycle app.
  *
  * This demonstrates the core pattern:
  *   1. Yield DOMSource to read user interactions as streams
  *   2. Maintain local state in a Ref
  *   3. Yield DOMSink to push a stream of VNodes for rendering
  *
- * No drivers are constructed here — they are provided externally by `run()`.
+ * No drivers are constructed here; they are provided externally by `run()`.
  */
 import { Effect, Ref, Stream } from "effect"
 import { DOMSink, DOMSource } from "effect-cycle-dom"
 
-// The app is just an Effect — no class, no framework lifecycle hooks.
+// The app is just an Effect: no class, no framework lifecycle hooks.
 // effect-cycle's `run()` will provide DOMSource and DOMSink from the driver layer.
 const app = Effect.gen(function* () {
   // DOMSource is a service tag; yielding it retrieves the driver-provided implementation.
@@ -21,7 +21,7 @@ const app = Effect.gen(function* () {
   // DOMSink receives a stream of VNodes (plain HTML strings) and writes them to the DOM.
   const sink = yield* DOMSink
 
-  // Local mutable state — Effect's Ref is a pure, concurrent-safe cell.
+  // Local mutable state: Effect's Ref is a pure, concurrent-safe cell.
   const count = yield* Ref.make(0)
 
   // dom.select returns a Stream<Event> that emits every time a matching element is clicked.

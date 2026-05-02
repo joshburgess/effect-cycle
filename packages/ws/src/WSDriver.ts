@@ -6,6 +6,7 @@ import { WSError } from "./errors.js"
 
 const makeWSDriver = Effect.gen(function* () {
   const config = yield* WSConfig
+  const scope = yield* Effect.scope
 
   const ws = yield* Effect.sync(() => new WebSocket(config.url, config.protocols?.slice()))
 
@@ -46,8 +47,19 @@ const makeWSDriver = Effect.gen(function* () {
       const onError = () => {
         void emit.fail(new WSError({ url: config.url }))
       }
-      const onClose = () => {
-        void emit.end()
+      const onClose = (e: Event) => {
+        const close = e as CloseEvent
+        if (close.wasClean) {
+          void emit.end()
+        } else {
+          void emit.fail(
+            new WSError({
+              url: config.url,
+              code: close.code,
+              ...(close.reason ? { reason: close.reason } : {}),
+            }),
+          )
+        }
       }
 
       ws.addEventListener("message", onMessage)
@@ -66,13 +78,11 @@ const makeWSDriver = Effect.gen(function* () {
 
   const sink: WSSink["Type"] = {
     send: (msg$) =>
-      Effect.gen(function* () {
-        yield* Stream.runForEach(msg$, (m) =>
-          Effect.sync(() => {
-            ws.send(m)
-          }),
-        ).pipe(Effect.fork)
-      }),
+      Stream.runForEach(msg$, (m) =>
+        Effect.sync(() => {
+          ws.send(m)
+        }),
+      ).pipe(Effect.forkIn(scope), Effect.asVoid),
   }
 
   return { source, sink }
@@ -92,5 +102,6 @@ export const WSDriverLive: Layer.Layer<WSSource | WSSink, never, WSConfig> = Lay
     Effect.map(({ source, sink }) =>
       Context.make(WSSource, source).pipe(Context.add(WSSink, sink)),
     ),
+    Effect.withSpan("WSDriverLive.acquire"),
   ),
 )

@@ -1,6 +1,7 @@
 import * as HttpClient from "@effect/platform/HttpClient"
+import * as HttpClientError from "@effect/platform/HttpClientError"
 import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
-import { Cause, Config, Duration, Effect, Layer, Schedule } from "effect"
+import { Config, Duration, Effect, Layer, Schedule } from "effect"
 import { HTTPDriverLive } from "./HTTPDriver.js"
 import type { HTTPSink } from "./HTTPSink.js"
 import type { HTTPSource } from "./HTTPSource.js"
@@ -44,12 +45,18 @@ export const HTTPDriverConfigured: Layer.Layer<
           configured = HttpClient.mapRequest(configured, HttpClientRequest.prependUrl(baseUrl))
         }
 
-        // Apply timeout: use timeoutFailCause with Cause.die so the error channel type
-        // stays as HttpClientError (timeout becomes a defect instead of a typed error).
-        configured = HttpClient.transformResponse(configured, (effect) =>
-          Effect.timeoutFailCause(effect, {
+        // Fold timeouts into HttpClientError.RequestError so the client's
+        // error type stays HttpClientError. The HTTP driver maps this to
+        // an HTTPError with status 408 (see mapError in HTTPDriver).
+        configured = HttpClient.transform(configured, (effect, request) =>
+          Effect.timeoutFail(effect, {
             duration: Duration.millis(timeoutMs),
-            onTimeout: () => Cause.die(new Error(`Request timed out after ${timeoutMs}ms`)),
+            onTimeout: () =>
+              new HttpClientError.RequestError({
+                request,
+                reason: "Transport",
+                description: `Request timed out after ${timeoutMs}ms`,
+              }),
           }),
         )
 

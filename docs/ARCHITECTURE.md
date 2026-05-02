@@ -38,7 +38,7 @@ Every driver exposes two services: a **source** (reads from the outside world) a
 | Driver | Source | Sink |
 |--------|--------|------|
 | DOM | `DOMSource`: `select(selector)` returns `Stream<Event>` | `DOMSink`: `render(vdom$)` writes HTML to the DOM |
-| HTTP | `HTTPSource`: `response(category)` returns `Stream<HttpClientResponse>` | `HTTPSink`: `request(category, req$)` sends HTTP requests |
+| HTTP | `HTTPSource`: `response(category)` for successful responses, `errors(category)` for `HTTPError`s | `HTTPSink`: `request(category, req$)` sends HTTP requests |
 | WebSocket | `WSSource`: `messages` stream + `connected` effect | `WSSink`: `send(msg$)` pushes messages to the socket |
 
 Services are defined using the `class extends Context.Tag(...)` pattern:
@@ -181,7 +181,7 @@ The `DOMDriverLive` layer has `DOMError` in its error channel (root element not 
 
 ```typescript
 const users$ = validatedResponse(source, "users", UserSchema)
-// Stream<User, HTTPError | ResponseError | ParseError>
+// Stream<User, ResponseError | ParseError>
 ```
 
 Parse failures appear as typed `ParseError` in the stream's error channel. No `unknown` to deal with downstream.
@@ -246,7 +246,7 @@ Each driver has source and sink test factories in `effect-cycle-testing`:
 |---------|-----------|
 | `TestDOMSource` | `(events: Record<string, Event[]>) => Layer<DOMSource>` |
 | `TestDOMSink` | `() => { layer: Layer<DOMSink>, rendered: VNode[] }` |
-| `TestHTTPSource` | `(responses: Record<string, HttpClientResponse[]>) => Layer<HTTPSource>` |
+| `TestHTTPSource` | `(responses: Record<string, HttpClientResponse[]>, errors?: Record<string, HTTPError[]>) => Layer<HTTPSource>` |
 | `TestHTTPSink` | `() => { layer: Layer<HTTPSink>, captured: { category, request }[] }` |
 | `TestWSSource` | `(messages: MessageEvent[]) => Layer<WSSource>` |
 | `TestWSSink` | `() => { layer: Layer<WSSink>, sent: (string \| ArrayBuffer)[] }` |

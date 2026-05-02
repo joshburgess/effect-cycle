@@ -47,7 +47,7 @@ describe("run", () => {
       yield* CounterService
     })
 
-    // @ts-expect-error — Layer<never> does not satisfy Layer<CounterService>
+    // @ts-expect-error: Layer<never> does not satisfy Layer<CounterService>
     run(app, Layer.empty)
   })
 })

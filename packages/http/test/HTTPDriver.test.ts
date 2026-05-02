@@ -130,7 +130,7 @@ describe("HTTPDriverLive", () => {
           .response("posts")
           .pipe(Stream.take(1), Stream.runCollect, Effect.fork)
 
-        // Only send to "users" — "posts" should get nothing
+        // Only send to "users"; "posts" should get nothing
         const usersReq = HttpClientRequest.get("https://api.example.com/users")
         yield* sink.request("users", Stream.make(usersReq))
 
@@ -139,7 +139,7 @@ describe("HTTPDriverLive", () => {
         expect(usersChunk.length).toBe(1)
         expect(usersChunk[0]?.status).toBe(200)
 
-        // The posts fiber is still waiting — it received nothing
+        // The posts fiber is still waiting; it received nothing
         // Interrupt it and verify it was interrupted (blocked, not done)
         const postsFiberStatus = yield* Fiber.status(postsCollectFiber)
         expect(postsFiberStatus._tag).not.toBe("Done")

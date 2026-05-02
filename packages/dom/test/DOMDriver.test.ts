@@ -118,7 +118,7 @@ describe("DOMDriverLive", () => {
         const originalNode = yield* Effect.sync(() => app?.querySelector("#x"))
         expect(originalNode?.textContent).toBe("old")
 
-        // Render updated content — morphdom should patch, not replace
+        // Render updated content: morphdom should patch, not replace
         yield* sink.render(Stream.make(`<div id="x">new</div>`))
         yield* Effect.yieldNow()
         yield* Effect.yieldNow()

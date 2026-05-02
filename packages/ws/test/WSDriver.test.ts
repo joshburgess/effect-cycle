@@ -27,7 +27,7 @@ describe("WSError", () => {
 })
 
 // ---------------------------------------------------------------------------
-// Test WSSource — emits scripted MessageEvents
+// Test WSSource: emits scripted MessageEvents
 // ---------------------------------------------------------------------------
 
 const makeMessageEvent = (data: string): MessageEvent => new MessageEvent("message", { data })
@@ -96,7 +96,7 @@ describe("WSSource", () => {
 })
 
 // ---------------------------------------------------------------------------
-// Test WSSink — captures sent messages into an array
+// Test WSSink: captures sent messages into an array
 // ---------------------------------------------------------------------------
 
 // A synchronous test sink that collects items directly (no fiber needed)

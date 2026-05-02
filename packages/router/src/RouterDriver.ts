@@ -1,5 +1,5 @@
 /**
- * RouterDriverLive -- bridges the browser History/hash API to Effect Streams.
+ * RouterDriverLive: bridges the browser History/hash API to Effect Streams.
  *
  * Supports two modes:
  *   - "hash": reads/writes window.location.hash (e.g. "#/articles/foo")
@@ -57,6 +57,7 @@ export const RouterDriverLive: Layer.Layer<RouterSource | RouterSink, never, Rou
   Layer.scopedContext(
     Effect.gen(function* () {
       const config = yield* RouterConfig
+      const scope = yield* Effect.scope
 
       // Queue acts as a broadcast channel: both popstate events and
       // programmatic navigations push into it, and the source stream
@@ -67,11 +68,13 @@ export const RouterDriverLive: Layer.Layer<RouterSource | RouterSink, never, Rou
       const initial = yield* Effect.sync(() => readLocation(config.mode, config.base))
       yield* Queue.offer(locationQueue, initial)
 
-      // Listen to browser navigation events
+      // Listen to browser navigation events. The queue is unbounded, so
+      // unsafeOffer is the correct primitive: no fiber allocation per event,
+      // no async boundary, no lost errors.
       const eventName = config.mode === "hash" ? "hashchange" : "popstate"
       const onNav = () => {
         const loc = readLocation(config.mode, config.base)
-        void Effect.runPromise(Queue.offer(locationQueue, loc))
+        Queue.unsafeOffer(locationQueue, loc)
       }
 
       yield* Effect.sync(() => {
@@ -148,7 +151,17 @@ export const RouterDriverLive: Layer.Layer<RouterSource | RouterSink, never, Rou
 
       // Sink implementation
       const sink: RouterSink["Type"] = {
-        navigate: (nav$) => Stream.runForEach(nav$, applyNav).pipe(Effect.fork, Effect.asVoid),
+        navigate: (nav$) =>
+          Stream.runForEach(nav$, (nav) =>
+            applyNav(nav).pipe(
+              Effect.tapError((error) =>
+                Effect.logWarning("Router navigation failed").pipe(
+                  Effect.annotateLogs({ message: error.message, type: nav.type }),
+                ),
+              ),
+              Effect.ignore,
+            ),
+          ).pipe(Effect.forkIn(scope), Effect.asVoid),
 
         push: (path) => applyNav({ type: "push", path }),
 
@@ -156,5 +169,5 @@ export const RouterDriverLive: Layer.Layer<RouterSource | RouterSink, never, Rou
       }
 
       return Context.empty().pipe(Context.add(RouterSource, source), Context.add(RouterSink, sink))
-    }),
+    }).pipe(Effect.withSpan("RouterDriverLive.acquire")),
   )

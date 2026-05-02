@@ -59,13 +59,13 @@ describe("makeHotRuntime", () => {
       const layer = makeCounterLayer(ref)
       const hot = yield* makeHotRuntime(layer)
 
-      // First app — sets ref to 10, then signals done
+      // First app: sets ref to 10, then signals done
       const firstDone = yield* Deferred.make<void>()
       const firstApp = Effect.gen(function* () {
         yield* Ref.set(ref, 10)
       }).pipe(Effect.ensuring(Deferred.succeed(firstDone, undefined)))
 
-      // Second app — adds 5 to whatever is in ref, then signals done
+      // Second app: adds 5 to whatever is in ref, then signals done
       const secondDone = yield* Deferred.make<void>()
       const secondApp = Effect.gen(function* () {
         const counter = yield* CounterService
@@ -111,9 +111,9 @@ describe("makeHotRuntime", () => {
       yield* hot.run(app)
       yield* Deferred.await(done)
 
-      // First dispose — should complete cleanly
+      // First dispose: should complete cleanly
       yield* hot.dispose
-      // Second dispose — should not throw (no fiber, runtime already disposed)
+      // Second dispose: should not throw (no fiber, runtime already disposed)
       yield* hot.dispose
 
       // No assertion needed; the test passes if no exception is thrown
@@ -153,7 +153,7 @@ describe("makeHotRuntime", () => {
       yield* hot.run(longApp)
       yield* Deferred.await(longStarted)
 
-      // Restart — should interrupt the long app and run the short one
+      // Restart: should interrupt the long app and run the short one
       yield* hot.run(shortApp)
       yield* Deferred.await(shortDone)
 

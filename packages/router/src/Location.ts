@@ -25,7 +25,7 @@ export interface RouteLocation {
  * does not match.
  *
  * Supports exact segments (`/foo`) and named params (`/:id`).
- * Matching is exact -- trailing segments cause a mismatch.
+ * Matching is exact: trailing segments cause a mismatch.
  *
  * @param pattern - Route pattern (e.g. `"/articles/:slug/comments/:id"`).
  * @param path - The actual URL path to match against.

@@ -104,7 +104,7 @@ describe("HTTPConfig defaults", () => {
 })
 
 // ---------------------------------------------------------------------------
-// HTTPDriverConfigured — base URL prepending
+// HTTPDriverConfigured: base URL prepending
 // ---------------------------------------------------------------------------
 
 describe("HTTPDriverConfigured", () => {

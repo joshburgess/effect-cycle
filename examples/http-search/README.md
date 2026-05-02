@@ -13,11 +13,12 @@ The dev server starts at `http://localhost:5173`. The app proxies `/api/search` 
 ## What it demonstrates
 
 - `HTTPSink.request(category, stream)` for dispatching named request streams
-- `HTTPSource.response(category)` for receiving the matching response stream
+- `HTTPSource.response(category)` for receiving successful responses
+- `HTTPSource.errors(category)` for receiving typed `HTTPError` failures (driver also logs them)
 - `Stream.debounce` for rate-limiting user input before making network calls
 - `HTTPDriverConfigured` reading base URL, timeout, and retry config from `ConfigProvider`
 - `FetchHttpClient.layer` as the underlying HTTP transport
-- Error handling at two levels: `Effect.orElse` for body-read errors, `Stream.catchAll` for `HTTPError`
+- Error handling at two levels: `Effect.orElse` for body-read errors, `Stream.mergeAll` to fold `errors(category)` into the rendered output
 - Composing multiple driver layers with `Layer.merge`
 
 ## Key files

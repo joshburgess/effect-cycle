@@ -15,11 +15,7 @@ const instrumentHTTPSource: Layer.Layer<HTTPSource, never, HTTPSource | DevTools
         response: (original) => (category) =>
           original(category).pipe(
             config.enableMetrics
-              ? (s) =>
-                  s.pipe(
-                    Stream.tap(() => Metric.increment(httpRequestCount)),
-                    Stream.tapError(() => Metric.increment(httpErrorCount)),
-                  )
+              ? Stream.tap(() => Metric.increment(httpRequestCount))
               : F.identity,
             config.logLevel !== "none"
               ? Stream.tap((res) =>
@@ -27,6 +23,18 @@ const instrumentHTTPSource: Layer.Layer<HTTPSource, never, HTTPSource | DevTools
                 )
               : F.identity,
             config.enableSpans ? Stream.withSpan("http.source.response") : F.identity,
+          ),
+        errors: (original) => (category) =>
+          original(category).pipe(
+            config.enableMetrics ? Stream.tap(() => Metric.increment(httpErrorCount)) : F.identity,
+            config.logLevel !== "none"
+              ? Stream.tap((err) =>
+                  Effect.log(
+                    `[HTTPSource] errors("${category}") status: ${err.status} url: ${err.url}`,
+                  ),
+                )
+              : F.identity,
+            config.enableSpans ? Stream.withSpan("http.source.errors") : F.identity,
           ),
       })
     }),
@@ -59,7 +67,7 @@ const instrumentHTTPSink: Layer.Layer<HTTPSink, never, HTTPSink | DevToolsConfig
   )
 
 // -------------------------------------------------------------------------------------
-// instrumentHTTP — convenience merge
+// instrumentHTTP: convenience merge
 // -------------------------------------------------------------------------------------
 
 export const instrumentHTTP: Layer.Layer<

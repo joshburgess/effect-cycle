@@ -1,5 +1,5 @@
 /**
- * TodoMVC -- effect-cycle showcase
+ * TodoMVC: effect-cycle showcase
  *
  * Demonstrates the full effect-cycle pattern in a single component:
  *   - DOMSource.element for event delegation on dynamic DOM
@@ -173,7 +173,7 @@ const app = Effect.gen(function* () {
   // Action bus
   const actions = yield* Queue.unbounded<Action>()
 
-  const offer = (action: Action) => Effect.runFork(Queue.offer(actions, action))
+  const offer = (action: Action) => Queue.unsafeOffer(actions, action)
 
   // Event delegation on the root element.
   // Native listeners push typed Actions into the Queue. This works with

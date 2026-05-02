@@ -7,8 +7,9 @@ import type { RouterError } from "./errors.js"
  * Write-only router sink service.
  *
  * Accepts navigation commands to push, replace, or go back/forward
- * in the browser history. Navigation methods may fail with `RouterError`
- * if the browser rejects the operation (e.g. SecurityError).
+ * in the browser history. The synchronous `push`/`replace` methods may fail
+ * with `RouterError` if the browser rejects the operation (e.g. SecurityError);
+ * `navigate` forks internally and any per-command failure is logged.
  *
  * @since 0.1.0
  */
@@ -20,9 +21,11 @@ export class RouterSink extends Context.Tag("effect-cycle/RouterSink")<
      * pushState, replaceState, or history.go() call. The location$ stream
      * on RouterSource will emit the new location after each navigation.
      *
-     * Forks internally -- returns immediately.
+     * Forks internally and returns immediately. Failures are logged by the
+     * driver rather than surfaced to the caller; use `push`/`replace` for
+     * one-shot navigation when error handling is required.
      */
-    readonly navigate: (nav$: Stream.Stream<Navigation>) => Effect.Effect<void, RouterError>
+    readonly navigate: (nav$: Stream.Stream<Navigation>) => Effect.Effect<void>
 
     /**
      * Convenience: push a single path. Shorthand for a one-element stream.

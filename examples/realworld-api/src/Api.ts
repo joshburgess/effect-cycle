@@ -24,7 +24,7 @@ import {
 } from "./Domain.js"
 
 // ---------------------------------------------------------------------------
-// Users group -- /api/users and /api/user
+// Users group: /api/users and /api/user
 // ---------------------------------------------------------------------------
 
 const login = HttpApiEndpoint.post("login", "/api/users/login")
@@ -53,7 +53,7 @@ export const UsersGroup = HttpApiGroup.make("users")
   .add(updateUser)
 
 // ---------------------------------------------------------------------------
-// Profiles group -- /api/profiles/:username
+// Profiles group: /api/profiles/:username
 // ---------------------------------------------------------------------------
 
 const getProfile = HttpApiEndpoint.get("getProfile", "/api/profiles/:username")
@@ -79,7 +79,7 @@ export const ProfilesGroup = HttpApiGroup.make("profiles")
   .add(unfollowUser)
 
 // ---------------------------------------------------------------------------
-// Articles group -- /api/articles
+// Articles group: /api/articles
 // ---------------------------------------------------------------------------
 
 const listArticles = HttpApiEndpoint.get("listArticles", "/api/articles")
@@ -137,7 +137,7 @@ export const ArticlesGroup = HttpApiGroup.make("articles")
   .add(deleteArticle)
 
 // ---------------------------------------------------------------------------
-// Comments group -- /api/articles/:slug/comments
+// Comments group: /api/articles/:slug/comments
 // ---------------------------------------------------------------------------
 
 const getComments = HttpApiEndpoint.get("getComments", "/api/articles/:slug/comments")
@@ -164,7 +164,7 @@ export const CommentsGroup = HttpApiGroup.make("comments")
   .add(deleteComment)
 
 // ---------------------------------------------------------------------------
-// Favorites group -- /api/articles/:slug/favorite
+// Favorites group: /api/articles/:slug/favorite
 // ---------------------------------------------------------------------------
 
 const favoriteArticle = HttpApiEndpoint.post("favoriteArticle", "/api/articles/:slug/favorite")
@@ -184,7 +184,7 @@ export const FavoritesGroup = HttpApiGroup.make("favorites")
   .add(unfavoriteArticle)
 
 // ---------------------------------------------------------------------------
-// Tags group -- /api/tags
+// Tags group: /api/tags
 // ---------------------------------------------------------------------------
 
 const getTags = HttpApiEndpoint.get("getTags", "/api/tags").addSuccess(TagsResponse)

@@ -48,7 +48,7 @@ describe("isolate", () => {
         const ns = target.closest("[data-ns]")?.getAttribute("data-ns") ?? "root"
         yield* Queue.offer(queue, ns)
 
-        // Now click the root button — isolated component should NOT receive this
+        // Now click the root button: isolated component should NOT receive this
         yield* Effect.sync(() => {
           const rootBtn = document.querySelector("#app > .btn") as HTMLButtonElement
           rootBtn.click()

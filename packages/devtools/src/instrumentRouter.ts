@@ -67,7 +67,7 @@ export const instrumentRouterSink: Layer.Layer<RouterSink, never, RouterSink | D
   )
 
 // -------------------------------------------------------------------------------------
-// instrumentRouter -- convenience merge
+// instrumentRouter: convenience merge
 // -------------------------------------------------------------------------------------
 
 /**

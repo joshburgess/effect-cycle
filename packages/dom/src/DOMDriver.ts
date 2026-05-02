@@ -23,6 +23,7 @@ export const DOMDriverLive: Layer.Layer<DOMSource | DOMSink, DOMError, DOMConfig
   Layer.scopedContext(
     Effect.gen(function* () {
       const config = yield* DOMConfig
+      const scope = yield* Effect.scope
 
       const root = yield* Effect.sync(() => document.querySelector(config.rootSelector)).pipe(
         Effect.flatMap((el) =>
@@ -60,27 +61,25 @@ export const DOMDriverLive: Layer.Layer<DOMSource | DOMSink, DOMError, DOMConfig
 
       const sink: DOMSink["Type"] = {
         render: (vdom$) =>
-          Effect.gen(function* () {
-            yield* Stream.runForEach(vdom$, (html) =>
-              Effect.sync(() => {
-                const template = document.createElement("template")
-                template.innerHTML = html.trim()
-                const newContent = template.content.firstElementChild
+          Stream.runForEach(vdom$, (html) =>
+            Effect.sync(() => {
+              const template = document.createElement("template")
+              template.innerHTML = html.trim()
+              const newContent = template.content.firstElementChild
 
-                if (newContent) {
-                  if (root.firstElementChild) {
-                    morphdom(root.firstElementChild, newContent)
-                  } else {
-                    root.innerHTML = html
-                  }
+              if (newContent) {
+                if (root.firstElementChild) {
+                  morphdom(root.firstElementChild, newContent)
                 } else {
                   root.innerHTML = html
                 }
-              }),
-            ).pipe(Effect.fork)
-          }),
+              } else {
+                root.innerHTML = html
+              }
+            }),
+          ).pipe(Effect.forkIn(scope), Effect.asVoid),
       }
 
       return Context.empty().pipe(Context.add(DOMSource, source), Context.add(DOMSink, sink))
-    }),
+    }).pipe(Effect.withSpan("DOMDriverLive.acquire")),
   )

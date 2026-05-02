@@ -63,7 +63,7 @@ export const instrumentDOMSink: Layer.Layer<DOMSink, never, DOMSink | DevToolsCo
   )
 
 // -------------------------------------------------------------------------------------
-// instrumentDOM — convenience merge
+// instrumentDOM: convenience merge
 // -------------------------------------------------------------------------------------
 
 /**
