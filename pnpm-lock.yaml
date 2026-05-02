@@ -213,14 +213,14 @@ importers:
   packages/dom:
     dependencies:
       aeon-core:
-        specifier: ^0.3.1
-        version: 0.3.1(aeon-types@0.2.0)
+        specifier: ^0.3.2
+        version: 0.3.2(aeon-types@0.2.0)
       aeon-dom:
         specifier: ^0.3.0
-        version: 0.3.0(aeon-core@0.3.1(aeon-types@0.2.0))(aeon-types@0.2.0)
+        version: 0.3.0(aeon-core@0.3.2(aeon-types@0.2.0))(aeon-types@0.2.0)
       aeon-effect:
         specifier: ^0.2.0
-        version: 0.2.0(@effect/typeclass@0.40.0(effect@3.21.0))(aeon-core@0.3.1(aeon-types@0.2.0))(aeon-types@0.2.0)(effect@3.21.0)
+        version: 0.2.0(@effect/typeclass@0.40.0(effect@3.21.0))(aeon-core@0.3.2(aeon-types@0.2.0))(aeon-types@0.2.0)(effect@3.21.0)
       aeon-scheduler:
         specifier: ^0.3.0
         version: 0.3.0
@@ -244,11 +244,11 @@ importers:
   packages/http:
     dependencies:
       aeon-core:
-        specifier: ^0.3.1
-        version: 0.3.1(aeon-types@0.2.0)
+        specifier: ^0.3.2
+        version: 0.3.2(aeon-types@0.2.0)
       aeon-effect:
         specifier: ^0.2.0
-        version: 0.2.0(@effect/typeclass@0.40.0(effect@3.21.0))(aeon-core@0.3.1(aeon-types@0.2.0))(aeon-types@0.2.0)(effect@3.21.0)
+        version: 0.2.0(@effect/typeclass@0.40.0(effect@3.21.0))(aeon-core@0.3.2(aeon-types@0.2.0))(aeon-types@0.2.0)(effect@3.21.0)
       aeon-scheduler:
         specifier: ^0.3.0
         version: 0.3.0
@@ -1134,10 +1134,10 @@ packages:
   '@vitest/utils@3.2.4':
     resolution: {integrity: sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA==}
 
-  aeon-core@0.3.1:
-    resolution: {integrity: sha512-w4KL+9bgjpo88s6V1M5MtEOXbnUwEe0icZu2PuZ1CwqiXkaF0XM90ZQE/UyZMpQQvdg8y6/Q5Np5FArCg+hZWw==}
+  aeon-core@0.3.2:
+    resolution: {integrity: sha512-4eWIqq3G+LTqKaOwLK0+8uyeYdF+9uyaJpT2IUF5VmmTOhxLI305CzG/tzxeJfLtR737iBkcm5QJrGUhf01fhA==}
     peerDependencies:
-      aeon-types: workspace:^
+      aeon-types: ^0.2.0
 
   aeon-dom@0.3.0:
     resolution: {integrity: sha512-JPqudk0ykK3XdD+FWk0zGwk2/GxrIOZYM2q4Qz8rY0Dun+tdOttvqaZQLBGWI6Aus24VQNIwrmIB9ilDxfKmPw==}
@@ -2276,19 +2276,19 @@ snapshots:
       loupe: 3.2.1
       tinyrainbow: 2.0.0
 
-  aeon-core@0.3.1(aeon-types@0.2.0):
+  aeon-core@0.3.2(aeon-types@0.2.0):
     dependencies:
       aeon-types: 0.2.0
 
-  aeon-dom@0.3.0(aeon-core@0.3.1(aeon-types@0.2.0))(aeon-types@0.2.0):
+  aeon-dom@0.3.0(aeon-core@0.3.2(aeon-types@0.2.0))(aeon-types@0.2.0):
     dependencies:
-      aeon-core: 0.3.1(aeon-types@0.2.0)
+      aeon-core: 0.3.2(aeon-types@0.2.0)
       aeon-types: 0.2.0
 
-  aeon-effect@0.2.0(@effect/typeclass@0.40.0(effect@3.21.0))(aeon-core@0.3.1(aeon-types@0.2.0))(aeon-types@0.2.0)(effect@3.21.0):
+  aeon-effect@0.2.0(@effect/typeclass@0.40.0(effect@3.21.0))(aeon-core@0.3.2(aeon-types@0.2.0))(aeon-types@0.2.0)(effect@3.21.0):
     dependencies:
       '@effect/typeclass': 0.40.0(effect@3.21.0)
-      aeon-core: 0.3.1(aeon-types@0.2.0)
+      aeon-core: 0.3.2(aeon-types@0.2.0)
       aeon-types: 0.2.0
       effect: 3.21.0
 
