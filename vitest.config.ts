@@ -1,7 +1,14 @@
 import path from "node:path"
+import solidPlugin from "vite-plugin-solid"
 import { defineConfig } from "vitest/config"
 
 export default defineConfig({
+  // vite-plugin-solid wires the right Solid resolution conditions and JSX
+  // runtime so solid-js / solid-js/web / solid-js/h pick their client
+  // builds under jsdom. Without it, vitest externalizes solid-js and Node's
+  // resolver picks the server bundle, which throws "Client-only API called
+  // on the server side". The plugin is a no-op for non-solid tests.
+  plugins: [solidPlugin()],
   resolve: {
     alias: {
       "effect-cycle-core": path.resolve(__dirname, "packages/core/src/index.ts"),
@@ -12,6 +19,7 @@ export default defineConfig({
       "effect-cycle-react": path.resolve(__dirname, "packages/react/src/index.ts"),
       "effect-cycle-lit-html": path.resolve(__dirname, "packages/lit-html/src/index.ts"),
       "effect-cycle-vue": path.resolve(__dirname, "packages/vue/src/index.ts"),
+      "effect-cycle-solid": path.resolve(__dirname, "packages/solid/src/index.ts"),
       "effect-cycle-http": path.resolve(__dirname, "packages/http/src/index.ts"),
       "effect-cycle-ws": path.resolve(__dirname, "packages/ws/src/index.ts"),
       "effect-cycle-router": path.resolve(__dirname, "packages/router/src/index.ts"),

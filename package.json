@@ -16,19 +16,21 @@
     "release": "pnpm build && pnpm -r --filter './packages/*' publish --access public"
   },
   "devDependencies": {
-    "@size-limit/preset-small-lib": "^11.2.0",
-    "size-limit": "^11.2.0",
     "@biomejs/biome": "^1.9.4",
     "@effect/platform": "^0.78.0",
     "@effect/vitest": "^0.29.0",
     "@rollup/plugin-node-resolve": "^16.0.0",
+    "@size-limit/preset-small-lib": "^11.2.0",
     "@swc/core": "^1.9.0",
     "effect": "^3.14.0",
     "fast-check": "^4.6.0",
     "jsdom": "^25.0.0",
     "rollup": "^4.28.0",
     "rollup-plugin-swc3": "^0.12.1",
+    "size-limit": "^11.2.0",
+    "solid-js": "^1.9.0",
     "typescript": "^5.7.2",
+    "vite-plugin-solid": "^2.11.12",
     "vitest": "^3.2.4"
   }
 }
