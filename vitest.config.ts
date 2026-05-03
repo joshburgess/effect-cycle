@@ -9,6 +9,7 @@ export default defineConfig({
       "effect-cycle-morphdom": path.resolve(__dirname, "packages/morphdom/src/index.ts"),
       "effect-cycle-tachys": path.resolve(__dirname, "packages/tachys/src/index.ts"),
       "effect-cycle-preact": path.resolve(__dirname, "packages/preact/src/index.ts"),
+      "effect-cycle-react": path.resolve(__dirname, "packages/react/src/index.ts"),
       "effect-cycle-http": path.resolve(__dirname, "packages/http/src/index.ts"),
       "effect-cycle-ws": path.resolve(__dirname, "packages/ws/src/index.ts"),
       "effect-cycle-router": path.resolve(__dirname, "packages/router/src/index.ts"),
