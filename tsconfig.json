@@ -9,6 +9,7 @@
       "effect-cycle-tachys": ["./packages/tachys/src/index.ts"],
       "effect-cycle-preact": ["./packages/preact/src/index.ts"],
       "effect-cycle-react": ["./packages/react/src/index.ts"],
+      "effect-cycle-lit": ["./packages/lit/src/index.ts"],
       "effect-cycle-http": ["./packages/http/src/index.ts"],
       "effect-cycle-ws": ["./packages/ws/src/index.ts"],
       "effect-cycle-testing": ["./packages/testing/src/index.ts"],
