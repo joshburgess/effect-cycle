@@ -10,8 +10,9 @@ import * as HttpIncomingMessage from "@effect/platform/HttpIncomingMessage"
 // @vitest-environment jsdom
 import { describe, expect, it } from "@effect/vitest"
 import { Chunk, Effect, Layer, Ref, Stream } from "effect"
-import { DOMSink, DOMSource } from "effect-cycle-dom"
+import { DOMSource } from "effect-cycle-dom"
 import { HTTPSink, HTTPSource } from "effect-cycle-http"
+import { DOMSink } from "effect-cycle-morphdom"
 import {
   TestDOMSink,
   TestDOMSource,
@@ -103,7 +104,7 @@ const wsChatApp = Effect.gen(function* () {
 describe("integration: counter app", () => {
   it.effect("renders after increment clicks", () =>
     Effect.gen(function* () {
-      const { layer: sinkLayer, rendered } = yield* TestDOMSink()
+      const { layer: sinkLayer, rendered } = yield* TestDOMSink(DOMSink)
       const sourceLayer = TestDOMSource({
         ".increment": [new Event("click"), new Event("click"), new Event("click")],
       })
@@ -122,7 +123,7 @@ describe("integration: counter app", () => {
 
   it.effect("renders after decrement clicks", () =>
     Effect.gen(function* () {
-      const { layer: sinkLayer, rendered } = yield* TestDOMSink()
+      const { layer: sinkLayer, rendered } = yield* TestDOMSink(DOMSink)
       const sourceLayer = TestDOMSource({
         ".decrement": [new Event("click"), new Event("click")],
       })
@@ -139,7 +140,7 @@ describe("integration: counter app", () => {
 
   it.effect("handles mixed inc/dec clicks", () =>
     Effect.gen(function* () {
-      const { layer: sinkLayer, rendered } = yield* TestDOMSink()
+      const { layer: sinkLayer, rendered } = yield* TestDOMSink(DOMSink)
       const sourceLayer = TestDOMSource({
         ".increment": [new Event("click"), new Event("click")],
         ".decrement": [new Event("click")],
@@ -157,7 +158,7 @@ describe("integration: counter app", () => {
 
   it.effect("no events produces no renders", () =>
     Effect.gen(function* () {
-      const { layer: sinkLayer, rendered } = yield* TestDOMSink()
+      const { layer: sinkLayer, rendered } = yield* TestDOMSink(DOMSink)
       const sourceLayer = TestDOMSource({})
 
       yield* counterApp.pipe(Effect.provide(Layer.merge(sourceLayer, sinkLayer)))
@@ -171,7 +172,7 @@ describe("integration: counter app", () => {
 describe("integration: HTTP search app", () => {
   it.effect("captures outgoing requests and renders responses", () =>
     Effect.gen(function* () {
-      const { layer: domSinkLayer, rendered } = yield* TestDOMSink()
+      const { layer: domSinkLayer, rendered } = yield* TestDOMSink(DOMSink)
       const domSourceLayer = TestDOMSource({})
 
       const { layer: httpSinkLayer, captured } = yield* TestHTTPSink()
@@ -208,7 +209,7 @@ describe("integration: HTTP search app", () => {
 describe("integration: WS chat app", () => {
   it.effect("sends outgoing messages and renders incoming", () =>
     Effect.gen(function* () {
-      const { layer: domSinkLayer, rendered } = yield* TestDOMSink()
+      const { layer: domSinkLayer, rendered } = yield* TestDOMSink(DOMSink)
       const domSourceLayer = TestDOMSource({})
 
       const { layer: wsSinkLayer, captured: wsCaptured } = yield* TestWSSink()

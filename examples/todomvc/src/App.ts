@@ -1,19 +1,28 @@
 /**
- * TodoMVC: effect-cycle showcase
+ * TodoMVC: effect-cycle showcase (tachys renderer)
  *
  * Demonstrates the full effect-cycle pattern in a single component:
  *   - DOMSource.element for event delegation on dynamic DOM
  *   - Effect Queue as an action bus (Elm-style)
  *   - Ref-based state management
- *   - Stream-driven rendering with morphdom patching
+ *   - Stream-driven rendering with the tachys vDOM renderer (`tachys/sync`)
  *
  * Architecture:
  *   Native event listeners on the root element push typed Actions into a Queue.
  *   A single Stream drains the Queue, applies each Action to Ref state, reads
- *   the updated state, and maps it to an HTML string for the DOM driver to render.
+ *   the updated state, and maps it to a tachys VNode tree for the DOM driver.
+ *
+ * Note on event handling:
+ *   This example deliberately keeps the event-delegation pattern from the
+ *   morphdom variant rather than switching to per-element `onClick`/`onChange`
+ *   props. The tachys-rendered DOM bubbles events the same way real DOM does,
+ *   so `addEventListener` on the persistent root + `closest`/`matches` still
+ *   works without coupling rendering to event wiring.
  */
 import { Effect, Queue, Ref, Stream } from "effect"
-import { DOMSink, DOMSource } from "effect-cycle-dom"
+import { DOMSource } from "effect-cycle-dom"
+import { DOMSink, type VNode } from "effect-cycle-tachys"
+import { h } from "tachys/sync"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -38,14 +47,6 @@ type Action =
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const escapeHtml = (text: string): string =>
-  text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;")
 
 const parseTodoId = (el: HTMLElement | null): number | undefined => {
   const li = el?.closest(".todo-item") as HTMLElement | null
@@ -88,13 +89,91 @@ const applyAction = (
 }
 
 // ---------------------------------------------------------------------------
-// View
+// View (tachys VNode tree)
 // ---------------------------------------------------------------------------
 
-const renderView = (todos: ReadonlyArray<Todo>, filter: Filter): string => {
+const renderTodoItem = (todo: Todo): VNode =>
+  h(
+    "li",
+    {
+      key: todo.id,
+      className: `todo-item${todo.completed ? " completed" : ""}`,
+      "data-id": todo.id,
+    },
+    h("input", {
+      className: "toggle",
+      type: "checkbox",
+      checked: todo.completed,
+    }),
+    h("label", null, todo.text),
+    h("button", { className: "destroy" }),
+  )
+
+const renderMain = (todos: ReadonlyArray<Todo>, visible: ReadonlyArray<Todo>): VNode | null => {
+  if (todos.length === 0) return null
+  const allCompleted = todos.every((t) => t.completed)
+
+  return h(
+    "section",
+    { className: "main" },
+    h(
+      "label",
+      { className: "toggle-all-label" },
+      h("input", { className: "toggle-all", type: "checkbox", checked: allCompleted }),
+      h("span", null, "Mark all as complete"),
+    ),
+    h("ul", { className: "todo-list" }, visible.map(renderTodoItem)),
+  )
+}
+
+const renderFilterLink = (filter: Filter, current: Filter, label: string): VNode =>
+  h(
+    "li",
+    null,
+    h(
+      "a",
+      {
+        className: `filter-${filter}${filter === current ? " selected" : ""}`,
+        href: "#",
+      },
+      label,
+    ),
+  )
+
+const renderFooter = (
+  todos: ReadonlyArray<Todo>,
+  filter: Filter,
+  activeCount: number,
+  completedCount: number,
+): VNode | null => {
+  if (todos.length === 0) return null
+
+  const children: Array<VNode> = [
+    h(
+      "span",
+      { className: "todo-count" },
+      h("strong", null, String(activeCount)),
+      ` ${activeCount === 1 ? "item" : "items"} left`,
+    ),
+    h(
+      "ul",
+      { className: "filters" },
+      renderFilterLink("all", filter, "All"),
+      renderFilterLink("active", filter, "Active"),
+      renderFilterLink("completed", filter, "Completed"),
+    ),
+  ]
+
+  if (completedCount > 0) {
+    children.push(h("button", { className: "clear-completed" }, "Clear completed"))
+  }
+
+  return h("footer", { className: "footer" }, children)
+}
+
+const renderView = (todos: ReadonlyArray<Todo>, filter: Filter): VNode => {
   const activeCount = todos.filter((t) => !t.completed).length
   const completedCount = todos.length - activeCount
-  const allCompleted = todos.length > 0 && activeCount === 0
 
   const visible = todos.filter((t) => {
     if (filter === "active") return !t.completed
@@ -102,59 +181,42 @@ const renderView = (todos: ReadonlyArray<Todo>, filter: Filter): string => {
     return true
   })
 
-  const todoItems = visible
-    .map(
-      (t) => `
-      <li class="todo-item${t.completed ? " completed" : ""}" data-id="${t.id}">
-        <input class="toggle" type="checkbox" ${t.completed ? "checked" : ""} />
-        <label>${escapeHtml(t.text)}</label>
-        <button class="destroy"></button>
-      </li>`,
-    )
-    .join("")
-
-  const mainSection =
-    todos.length > 0
-      ? `<section class="main">
-          <label class="toggle-all-label">
-            <input class="toggle-all" type="checkbox" ${allCompleted ? "checked" : ""} />
-            <span>Mark all as complete</span>
-          </label>
-          <ul class="todo-list">${todoItems}</ul>
-        </section>`
-      : ""
-
-  const footerSection =
-    todos.length > 0
-      ? `<footer class="footer">
-          <span class="todo-count">
-            <strong>${activeCount}</strong> ${activeCount === 1 ? "item" : "items"} left
-          </span>
-          <ul class="filters">
-            <li><a class="filter-all${filter === "all" ? " selected" : ""}" href="#">All</a></li>
-            <li><a class="filter-active${filter === "active" ? " selected" : ""}" href="#">Active</a></li>
-            <li><a class="filter-completed${filter === "completed" ? " selected" : ""}" href="#">Completed</a></li>
-          </ul>
-          ${completedCount > 0 ? '<button class="clear-completed">Clear completed</button>' : ""}
-        </footer>`
-      : ""
-
-  return `<div class="todomvc-wrapper">
-    <section class="todomvc">
-      <header class="header">
-        <h1>todos</h1>
-        <form class="new-todo-form">
-          <input class="new-todo" type="text" placeholder="What needs to be done?" autofocus />
-        </form>
-      </header>
-      ${mainSection}
-      ${footerSection}
-    </section>
-    <footer class="info">
-      <p>Double-click to edit a todo</p>
-      <p>Built with <a href="https://github.com/joshburgess/effect-cycle">effect-cycle</a></p>
-    </footer>
-  </div>`
+  return h(
+    "div",
+    { className: "todomvc-wrapper" },
+    h(
+      "section",
+      { className: "todomvc" },
+      h(
+        "header",
+        { className: "header" },
+        h("h1", null, "todos"),
+        h(
+          "form",
+          { className: "new-todo-form" },
+          h("input", {
+            className: "new-todo",
+            type: "text",
+            placeholder: "What needs to be done?",
+            autoFocus: true,
+          }),
+        ),
+      ),
+      renderMain(todos, visible),
+      renderFooter(todos, filter, activeCount, completedCount),
+    ),
+    h(
+      "footer",
+      { className: "info" },
+      h("p", null, "Double-click to edit a todo"),
+      h(
+        "p",
+        null,
+        "Built with ",
+        h("a", { href: "https://github.com/joshburgess/effect-cycle" }, "effect-cycle"),
+      ),
+    ),
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -235,8 +297,8 @@ const app = Effect.gen(function* () {
     })
   })
 
-  // Render pipeline: initial tick + action stream -> state -> HTML
-  const vdom$: Stream.Stream<string> = Stream.concat(
+  // Render pipeline: initial tick + action stream -> state -> VNode tree
+  const vdom$: Stream.Stream<VNode> = Stream.concat(
     Stream.make(undefined as undefined),
     Stream.fromQueue(actions).pipe(
       Stream.tap((action) => applyAction(action, todos, filter, nextId)),

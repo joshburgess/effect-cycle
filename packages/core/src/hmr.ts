@@ -81,7 +81,8 @@ export const makeHotRuntime = <R>(drivers: Layer.Layer<R>): Effect.Effect<HotRun
  * @example
  * ```ts
  * import { installHmr } from "effect-cycle-core"
- * import { DOMDriverLive, DOMConfigDefault } from "effect-cycle-dom"
+ * import { DOMConfigDefault } from "effect-cycle-dom"
+ * import { DOMDriverLive } from "effect-cycle-morphdom"
  *
  * const drivers = DOMDriverLive.pipe(Layer.provide(DOMConfigDefault), Layer.orDie)
  * installHmr(drivers, app, import.meta.hot)

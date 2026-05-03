@@ -2,11 +2,15 @@
  * Entrypoint for the TodoMVC example.
  *
  * Only the DOM driver is needed here: no HTTP or WebSocket.
- * Layer composition follows the same pattern as the counter example.
+ * This example uses the tachys vDOM renderer (`effect-cycle-tachys`)
+ * to demonstrate the renderer-agnostic split: `DOMSource` comes from
+ * `effect-cycle-dom`, while the renderer-specific `DOMSink` and
+ * `DOMDriverLive` come from `effect-cycle-tachys`.
  */
 import { Layer } from "effect"
 import { run } from "effect-cycle-core"
-import { DOMConfigDefault, DOMDriverLive } from "effect-cycle-dom"
+import { DOMConfigDefault } from "effect-cycle-dom"
+import { DOMDriverLive } from "effect-cycle-tachys"
 import app from "./App.js"
 
 // Provide DOMConfig to the DOM driver, producing a fully self-contained layer.

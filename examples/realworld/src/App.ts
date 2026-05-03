@@ -1,6 +1,6 @@
 import * as HttpClient from "@effect/platform/HttpClient"
 /**
- * RealWorld (Conduit): effect-cycle frontend
+ * RealWorld (Conduit): effect-cycle frontend (tachys renderer)
  *
  * Full single-page app implementing the RealWorld spec:
  *   - Hash-based routing via RouterSource/RouterSink
@@ -8,13 +8,23 @@ import * as HttpClient from "@effect/platform/HttpClient"
  *   - Queue-based action bus (Elm architecture)
  *   - Ref-based state management
  *   - Event delegation on the root element
- *   - Stream-driven rendering via DOMSink
+ *   - Stream-driven rendering with the tachys vDOM renderer (`tachys/sync`)
+ *
+ * Architecture notes:
+ *   `DOMSource` comes from `effect-cycle-dom`, while the renderer-specific
+ *   `DOMSink` (and the `DOMDriverLive` wired up in main.ts) come from
+ *   `effect-cycle-tachys`. The Action-bus pattern is identical to the
+ *   morphdom variant; tachys-rendered DOM bubbles events the same way real
+ *   DOM does, so `addEventListener` on the persistent root + `closest`/
+ *   `matches` continues to work unchanged.
  */
 import type * as HttpClientError from "@effect/platform/HttpClientError"
 import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import { Data, Effect, Queue, Ref, Schema, type Scope, Stream } from "effect"
-import { DOMSink, DOMSource } from "effect-cycle-dom"
+import { DOMSource } from "effect-cycle-dom"
 import { RouterSink, RouterSource, matchPath } from "effect-cycle-router"
+import { DOMSink, type VNode } from "effect-cycle-tachys"
+import { h } from "tachys/sync"
 
 // ---------------------------------------------------------------------------
 // Domain schemas (validate API responses at the boundary)
@@ -211,14 +221,6 @@ const readState = (refs: Refs): Effect.Effect<AppState> =>
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const escapeHtml = (s: string): string =>
-  s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;")
 
 const formatDate = (iso: string): string => {
   const d = new Date(iso)
@@ -1170,14 +1172,32 @@ const handleAction = (
 }
 
 // ---------------------------------------------------------------------------
-// Views
+// Views (tachys VNode trees)
 // ---------------------------------------------------------------------------
 
-const renderNav = (user: User | null, currentPath: string): string => {
-  const navLink = (href: string, label: string, icon?: string): string => {
+// Inline-style helpers (tachys requires CSS objects, not strings; setProperty
+// uses kebab-case).
+const textareaStyle = {
+  width: "100%",
+  padding: "12px",
+  fontSize: "16px",
+  border: "1px solid #ccc",
+  borderRadius: "4px",
+  fontFamily: "inherit",
+} as const
+
+const renderNav = (user: User | null, currentPath: string): VNode => {
+  const navLink = (href: string, label: string, icon?: string): VNode => {
     const active = currentPath === href ? " active" : ""
-    const content = icon ? `<i class="${icon}"></i>&nbsp;${label}` : label
-    return `<li><a href="#${href}" class="nav-link${active}">${content}</a></li>`
+    return h(
+      "li",
+      null,
+      h(
+        "a",
+        { href: `#${href}`, className: `nav-link${active}` },
+        icon ? [h("i", { className: icon }), " ", label] : label,
+      ),
+    )
   }
 
   const links = user
@@ -1189,384 +1209,726 @@ const renderNav = (user: User | null, currentPath: string): string => {
       ]
     : [navLink("/", "Home"), navLink("/login", "Sign in"), navLink("/register", "Sign up")]
 
-  return `
-    <nav class="navbar">
-      <div class="container">
-        <a class="navbar-brand" href="#/">conduit</a>
-        <ul class="nav-links">${links.join("")}</ul>
-      </div>
-    </nav>`
+  return h(
+    "nav",
+    { className: "navbar" },
+    h(
+      "div",
+      { className: "container" },
+      h("a", { className: "navbar-brand", href: "#/" }, "conduit"),
+      h("ul", { className: "nav-links" }, links),
+    ),
+  )
 }
 
-const renderFooter = (): string => `
-  <footer class="app-footer">
-    <div class="container">
-      <a href="#/" class="navbar-brand">conduit</a>
-      <span>An interactive learning project from <a href="https://thinkster.io">Thinkster</a>.
-      Code licensed under MIT.</span>
-    </div>
-  </footer>`
+const renderFooter = (): VNode =>
+  h(
+    "footer",
+    { className: "app-footer" },
+    h(
+      "div",
+      { className: "container" },
+      h("a", { href: "#/", className: "navbar-brand" }, "conduit"),
+      h(
+        "span",
+        null,
+        "An interactive learning project from ",
+        h("a", { href: "https://thinkster.io" }, "Thinkster"),
+        ". Code licensed under MIT.",
+      ),
+    ),
+  )
 
-const renderBanner = (): string => `
-  <div class="banner">
-    <div class="container">
-      <h1>conduit</h1>
-      <p>A place to share your knowledge.</p>
-    </div>
-  </div>`
+const renderBanner = (): VNode =>
+  h(
+    "div",
+    { className: "banner" },
+    h(
+      "div",
+      { className: "container" },
+      h("h1", null, "conduit"),
+      h("p", null, "A place to share your knowledge."),
+    ),
+  )
 
-const renderErrors = (errors: ReadonlyArray<string>): string => {
-  if (errors.length === 0) return ""
-  return `<ul class="error-messages">${errors.map((e) => `<li>${escapeHtml(e)}</li>`).join("")}</ul>`
+const renderErrors = (errors: ReadonlyArray<string>): VNode | null => {
+  if (errors.length === 0) return null
+  return h(
+    "ul",
+    { className: "error-messages" },
+    errors.map((e) => h("li", null, e)),
+  )
 }
 
-const renderArticlePreview = (article: Article): string => {
+const renderAuthorAvatar = (author: Author): VNode =>
+  h("a", { href: `#/@${author.username}` }, h("img", { src: avatarUrl(author.image), alt: "" }))
+
+const renderArticlePreview = (article: Article): VNode => {
   const favClass = article.favorited ? "btn-outline-primary favorited" : "btn-outline-primary"
   const favAction = article.favorited ? "unfavorite" : "favorite"
-  return `
-    <div class="article-preview">
-      <div class="article-meta">
-        <a href="#/@${escapeHtml(article.author.username)}">
-          <img src="${avatarUrl(article.author.image)}" alt="" />
-        </a>
-        <div class="info">
-          <a class="author" href="#/@${escapeHtml(article.author.username)}">${escapeHtml(article.author.username)}</a>
-          <span class="date">${formatDate(article.createdAt)}</span>
-        </div>
-        <div class="favorite-btn">
-          <button class="${favClass}" data-action="${favAction}" data-slug="${escapeHtml(article.slug)}">
-            <i class="ion-heart"></i> ${article.favoritesCount}
-          </button>
-        </div>
-      </div>
-      <a href="#/article/${escapeHtml(article.slug)}" class="preview-link">
-        <h2>${escapeHtml(article.title)}</h2>
-        <p>${escapeHtml(article.description)}</p>
-        <span class="read-more">Read more...</span>
-        ${article.tagList.length > 0 ? `<ul class="tag-list">${article.tagList.map((t) => `<li class="tag-pill tag-default">${escapeHtml(t)}</li>`).join("")}</ul>` : ""}
-      </a>
-    </div>`
+  return h(
+    "div",
+    { className: "article-preview", key: article.slug },
+    h(
+      "div",
+      { className: "article-meta" },
+      renderAuthorAvatar(article.author),
+      h(
+        "div",
+        { className: "info" },
+        h(
+          "a",
+          { className: "author", href: `#/@${article.author.username}` },
+          article.author.username,
+        ),
+        h("span", { className: "date" }, formatDate(article.createdAt)),
+      ),
+      h(
+        "div",
+        { className: "favorite-btn" },
+        h(
+          "button",
+          { className: favClass, "data-action": favAction, "data-slug": article.slug },
+          h("i", { className: "ion-heart" }),
+          ` ${article.favoritesCount}`,
+        ),
+      ),
+    ),
+    h(
+      "a",
+      { href: `#/article/${article.slug}`, className: "preview-link" },
+      h("h2", null, article.title),
+      h("p", null, article.description),
+      h("span", { className: "read-more" }, "Read more..."),
+      article.tagList.length > 0
+        ? h(
+            "ul",
+            { className: "tag-list" },
+            article.tagList.map((t) => h("li", { className: "tag-pill tag-default" }, t)),
+          )
+        : null,
+    ),
+  )
 }
 
-const renderPagination = (totalCount: number, currentPage: number): string => {
+const renderPagination = (totalCount: number, currentPage: number): VNode | null => {
   const totalPages = Math.ceil(totalCount / 20)
-  if (totalPages <= 1) return ""
-  const pages: string[] = []
+  if (totalPages <= 1) return null
+  const pages: Array<VNode> = []
   for (let i = 0; i < totalPages; i++) {
     const active = i === currentPage ? " active" : ""
     pages.push(
-      `<li><a class="page-link${active}" href="#" data-action="set-page" data-page="${i}">${i + 1}</a></li>`,
+      h(
+        "li",
+        { key: i },
+        h(
+          "a",
+          {
+            className: `page-link${active}`,
+            href: "#",
+            "data-action": "set-page",
+            "data-page": String(i),
+          },
+          String(i + 1),
+        ),
+      ),
     )
   }
-  return `<nav class="pagination"><ul>${pages.join("")}</ul></nav>`
+  return h("nav", { className: "pagination" }, h("ul", null, pages))
 }
 
-const renderHomePage = (state: AppState): string => {
-  const feedTabs: string[] = []
+const renderHomePage = (state: AppState): VNode => {
+  const feedTabs: Array<VNode> = []
 
   if (state.user) {
     const yourActive = state.feedType === "your" ? " active" : ""
     feedTabs.push(
-      `<li><a class="feed-tab${yourActive}" href="#" data-feed="your">Your Feed</a></li>`,
+      h(
+        "li",
+        { key: "your" },
+        h("a", { className: `feed-tab${yourActive}`, href: "#", "data-feed": "your" }, "Your Feed"),
+      ),
     )
   }
 
   const globalActive = state.feedType === "global" ? " active" : ""
   feedTabs.push(
-    `<li><a class="feed-tab${globalActive}" href="#" data-feed="global">Global Feed</a></li>`,
+    h(
+      "li",
+      { key: "global" },
+      h(
+        "a",
+        { className: `feed-tab${globalActive}`, href: "#", "data-feed": "global" },
+        "Global Feed",
+      ),
+    ),
   )
 
   if (state.feedType === "tag" && state.activeTag) {
     feedTabs.push(
-      `<li><a class="feed-tab active" href="#" data-feed="tag" data-tag="${escapeHtml(state.activeTag)}"># ${escapeHtml(state.activeTag)}</a></li>`,
+      h(
+        "li",
+        { key: `tag-${state.activeTag}` },
+        h(
+          "a",
+          {
+            className: "feed-tab active",
+            href: "#",
+            "data-feed": "tag",
+            "data-tag": state.activeTag,
+          },
+          `# ${state.activeTag}`,
+        ),
+      ),
     )
   }
 
-  const articles = state.loading
-    ? '<div class="article-preview">Loading articles...</div>'
+  const articles: VNode | Array<VNode> = state.loading
+    ? h("div", { className: "article-preview" }, "Loading articles...")
     : state.articles.length === 0
-      ? '<div class="article-preview">No articles are here... yet.</div>'
-      : state.articles.map(renderArticlePreview).join("")
+      ? h("div", { className: "article-preview" }, "No articles are here... yet.")
+      : state.articles.map(renderArticlePreview)
 
-  const tags =
+  const tagsBlock: Array<VNode> =
     state.loading && state.tags.length === 0
-      ? "<p>Loading tags...</p>"
+      ? [h("p", null, "Loading tags...")]
       : state.tags.length === 0
-        ? '<p>Popular Tags</p><p style="color:#aaa;font-size:14px">No tags yet.</p>'
-        : `<p>Popular Tags</p>
-       <div class="tag-list">
-         ${state.tags.map((t) => `<a class="tag-pill" href="#" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</a>`).join("")}
-       </div>`
+        ? [
+            h("p", null, "Popular Tags"),
+            h("p", { style: { color: "#aaa", fontSize: "14px" } }, "No tags yet."),
+          ]
+        : [
+            h("p", null, "Popular Tags"),
+            h(
+              "div",
+              { className: "tag-list" },
+              state.tags.map((t) =>
+                h("a", { className: "tag-pill", href: "#", "data-tag": t, key: t }, t),
+              ),
+            ),
+          ]
 
-  return `
-    ${state.user ? "" : renderBanner()}
-    <div class="home-page">
-      <div class="container">
-        <div class="feed-container">
-          <div class="feed-toggle">
-            <ul>${feedTabs.join("")}</ul>
-          </div>
-          ${articles}
-          ${renderPagination(state.articlesCount, state.currentPage)}
-        </div>
-        <div class="sidebar-container">
-          <div class="sidebar">
-            ${tags}
-          </div>
-        </div>
-      </div>
-    </div>`
+  return h(
+    "div",
+    null,
+    state.user ? null : renderBanner(),
+    h(
+      "div",
+      { className: "home-page" },
+      h(
+        "div",
+        { className: "container" },
+        h(
+          "div",
+          { className: "feed-container" },
+          h("div", { className: "feed-toggle" }, h("ul", null, feedTabs)),
+          articles,
+          renderPagination(state.articlesCount, state.currentPage),
+        ),
+        h("div", { className: "sidebar-container" }, h("div", { className: "sidebar" }, tagsBlock)),
+      ),
+    ),
+  )
 }
 
-const renderLoginPage = (state: AppState): string => `
-  <div class="auth-page">
-    <h1>Sign in</h1>
-    <p><a href="#/register">Need an account?</a></p>
-    ${renderErrors(state.errors)}
-    <form id="login-form">
-      <div class="form-group">
-        <input type="email" name="email" placeholder="Email" required />
-      </div>
-      <div class="form-group">
-        <input type="password" name="password" placeholder="Password" required />
-      </div>
-      <button class="btn" type="submit"${state.loading ? " disabled" : ""}>Sign in</button>
-    </form>
-  </div>`
+const renderLoginPage = (state: AppState): VNode =>
+  h(
+    "div",
+    { className: "auth-page" },
+    h("h1", null, "Sign in"),
+    h("p", null, h("a", { href: "#/register" }, "Need an account?")),
+    renderErrors(state.errors),
+    h(
+      "form",
+      { id: "login-form" },
+      h(
+        "div",
+        { className: "form-group" },
+        h("input", { type: "email", name: "email", placeholder: "Email", required: true }),
+      ),
+      h(
+        "div",
+        { className: "form-group" },
+        h("input", {
+          type: "password",
+          name: "password",
+          placeholder: "Password",
+          required: true,
+        }),
+      ),
+      h("button", { className: "btn", type: "submit", disabled: state.loading }, "Sign in"),
+    ),
+  )
 
-const renderRegisterPage = (state: AppState): string => `
-  <div class="auth-page">
-    <h1>Sign up</h1>
-    <p><a href="#/login">Have an account?</a></p>
-    ${renderErrors(state.errors)}
-    <form id="register-form">
-      <div class="form-group">
-        <input type="text" name="username" placeholder="Username" required />
-      </div>
-      <div class="form-group">
-        <input type="email" name="email" placeholder="Email" required />
-      </div>
-      <div class="form-group">
-        <input type="password" name="password" placeholder="Password" required />
-      </div>
-      <button class="btn" type="submit"${state.loading ? " disabled" : ""}>Sign up</button>
-    </form>
-  </div>`
+const renderRegisterPage = (state: AppState): VNode =>
+  h(
+    "div",
+    { className: "auth-page" },
+    h("h1", null, "Sign up"),
+    h("p", null, h("a", { href: "#/login" }, "Have an account?")),
+    renderErrors(state.errors),
+    h(
+      "form",
+      { id: "register-form" },
+      h(
+        "div",
+        { className: "form-group" },
+        h("input", { type: "text", name: "username", placeholder: "Username", required: true }),
+      ),
+      h(
+        "div",
+        { className: "form-group" },
+        h("input", { type: "email", name: "email", placeholder: "Email", required: true }),
+      ),
+      h(
+        "div",
+        { className: "form-group" },
+        h("input", {
+          type: "password",
+          name: "password",
+          placeholder: "Password",
+          required: true,
+        }),
+      ),
+      h("button", { className: "btn", type: "submit", disabled: state.loading }, "Sign up"),
+    ),
+  )
 
-const renderSettingsPage = (state: AppState): string => {
+const renderSettingsPage = (state: AppState): VNode => {
   const u = state.user
-  if (!u) return "<p>Please sign in.</p>"
-  return `
-    <div class="auth-page">
-      <h1>Your Settings</h1>
-      ${renderErrors(state.errors)}
-      <form id="settings-form">
-        <div class="form-group">
-          <input type="text" name="image" placeholder="URL of profile picture" value="${escapeHtml(u.image || "")}" />
-        </div>
-        <div class="form-group">
-          <input type="text" name="username" placeholder="Username" value="${escapeHtml(u.username)}" required />
-        </div>
-        <div class="form-group">
-          <textarea name="bio" placeholder="Short bio about you" rows="8" style="width:100%;padding:12px;font-size:16px;border:1px solid #ccc;border-radius:4px;font-family:inherit">${escapeHtml(u.bio || "")}</textarea>
-        </div>
-        <div class="form-group">
-          <input type="email" name="email" placeholder="Email" value="${escapeHtml(u.email)}" required />
-        </div>
-        <div class="form-group">
-          <input type="password" name="password" placeholder="New Password" />
-        </div>
-        <button class="btn" type="submit"${state.loading ? " disabled" : ""}>Update Settings</button>
-      </form>
-      <hr style="margin:24px 0" />
-      <button class="btn btn-outline-danger" id="logout-btn" type="button">Or click here to logout.</button>
-    </div>`
+  if (!u) return h("p", null, "Please sign in.")
+  return h(
+    "div",
+    { className: "auth-page" },
+    h("h1", null, "Your Settings"),
+    renderErrors(state.errors),
+    h(
+      "form",
+      { id: "settings-form" },
+      h(
+        "div",
+        { className: "form-group" },
+        h("input", {
+          type: "text",
+          name: "image",
+          placeholder: "URL of profile picture",
+          value: u.image || "",
+        }),
+      ),
+      h(
+        "div",
+        { className: "form-group" },
+        h("input", {
+          type: "text",
+          name: "username",
+          placeholder: "Username",
+          value: u.username,
+          required: true,
+        }),
+      ),
+      h(
+        "div",
+        { className: "form-group" },
+        h("textarea", {
+          name: "bio",
+          placeholder: "Short bio about you",
+          rows: 8,
+          style: textareaStyle,
+          value: u.bio || "",
+        }),
+      ),
+      h(
+        "div",
+        { className: "form-group" },
+        h("input", {
+          type: "email",
+          name: "email",
+          placeholder: "Email",
+          value: u.email,
+          required: true,
+        }),
+      ),
+      h(
+        "div",
+        { className: "form-group" },
+        h("input", { type: "password", name: "password", placeholder: "New Password" }),
+      ),
+      h("button", { className: "btn", type: "submit", disabled: state.loading }, "Update Settings"),
+    ),
+    h("hr", { style: { margin: "24px 0" } }),
+    h(
+      "button",
+      { className: "btn btn-outline-danger", id: "logout-btn", type: "button" },
+      "Or click here to logout.",
+    ),
+  )
 }
 
-const renderEditorPage = (state: AppState): string => {
+const renderEditorPage = (state: AppState): VNode => {
   const a = state.editingArticle
   const isEditing = a !== null
-  const title = a ? escapeHtml(a.title) : ""
-  const description = a ? escapeHtml(a.description) : ""
-  const body = a ? escapeHtml(a.body) : ""
-  const tagList = a ? escapeHtml(a.tagList.join(", ")) : ""
-  const slug = a ? escapeHtml(a.slug) : ""
 
-  if (isEditing && state.loading && !a) return '<div class="container"><p>Loading...</p></div>'
+  if (isEditing && state.loading && !a) {
+    return h("div", { className: "container" }, h("p", null, "Loading..."))
+  }
 
-  return `
-    <div class="auth-page">
-      <h1>${isEditing ? "Edit Article" : "New Article"}</h1>
-      ${renderErrors(state.errors)}
-      <form id="editor-form"${isEditing ? ` data-slug="${slug}"` : ""}>
-        <div class="form-group">
-          <input type="text" name="title" placeholder="Article Title" value="${title}" required />
-        </div>
-        <div class="form-group">
-          <input type="text" name="description" placeholder="What's this article about?" value="${description}" required />
-        </div>
-        <div class="form-group">
-          <textarea name="body" placeholder="Write your article (in markdown)" rows="12" style="width:100%;padding:12px;font-size:16px;border:1px solid #ccc;border-radius:4px;font-family:inherit" required>${body}</textarea>
-        </div>
-        <div class="form-group">
-          <input type="text" name="tagList" placeholder="Enter tags (comma separated)" value="${tagList}" />
-        </div>
-        <button class="btn" type="submit"${state.loading ? " disabled" : ""}>${isEditing ? "Update Article" : "Publish Article"}</button>
-      </form>
-    </div>`
+  const formProps =
+    isEditing && a
+      ? ({ id: "editor-form", "data-slug": a.slug } as const)
+      : ({ id: "editor-form" } as const)
+
+  return h(
+    "div",
+    { className: "auth-page" },
+    h("h1", null, isEditing ? "Edit Article" : "New Article"),
+    renderErrors(state.errors),
+    h(
+      "form",
+      formProps,
+      h(
+        "div",
+        { className: "form-group" },
+        h("input", {
+          type: "text",
+          name: "title",
+          placeholder: "Article Title",
+          value: a ? a.title : "",
+          required: true,
+        }),
+      ),
+      h(
+        "div",
+        { className: "form-group" },
+        h("input", {
+          type: "text",
+          name: "description",
+          placeholder: "What's this article about?",
+          value: a ? a.description : "",
+          required: true,
+        }),
+      ),
+      h(
+        "div",
+        { className: "form-group" },
+        h("textarea", {
+          name: "body",
+          placeholder: "Write your article (in markdown)",
+          rows: 12,
+          style: textareaStyle,
+          required: true,
+          value: a ? a.body : "",
+        }),
+      ),
+      h(
+        "div",
+        { className: "form-group" },
+        h("input", {
+          type: "text",
+          name: "tagList",
+          placeholder: "Enter tags (comma separated)",
+          value: a ? a.tagList.join(", ") : "",
+        }),
+      ),
+      h(
+        "button",
+        { className: "btn", type: "submit", disabled: state.loading },
+        isEditing ? "Update Article" : "Publish Article",
+      ),
+    ),
+  )
 }
 
-const renderArticlePage = (state: AppState): string => {
-  if (state.loading && !state.article) return '<div class="container"><p>Loading...</p></div>'
-  const a = state.article
-  if (!a) return '<div class="container"><p>Article not found.</p></div>'
-
+const renderArticleMeta = (a: Article, state: AppState): VNode => {
   const isAuthor = state.user !== null && state.user.username === a.author.username
-  const followBtn =
+  const followBtn: VNode | null =
     state.user && !isAuthor
       ? a.author.following
-        ? `<button class="btn-outline-primary" data-action="unfollow" data-username="${escapeHtml(a.author.username)}">
-           <i class="ion-minus-round"></i> Unfollow ${escapeHtml(a.author.username)}
-         </button>`
-        : `<button class="btn-outline-primary" data-action="follow" data-username="${escapeHtml(a.author.username)}">
-           <i class="ion-plus-round"></i> Follow ${escapeHtml(a.author.username)}
-         </button>`
-      : ""
+        ? h(
+            "button",
+            {
+              className: "btn-outline-primary",
+              "data-action": "unfollow",
+              "data-username": a.author.username,
+            },
+            h("i", { className: "ion-minus-round" }),
+            ` Unfollow ${a.author.username}`,
+          )
+        : h(
+            "button",
+            {
+              className: "btn-outline-primary",
+              "data-action": "follow",
+              "data-username": a.author.username,
+            },
+            h("i", { className: "ion-plus-round" }),
+            ` Follow ${a.author.username}`,
+          )
+      : null
 
-  const favBtn = state.user
+  const favBtn: VNode | null = state.user
     ? a.favorited
-      ? `<button class="btn-outline-primary" data-action="unfavorite" data-slug="${escapeHtml(a.slug)}">
-           <i class="ion-heart"></i> Unfavorite Article (${a.favoritesCount})
-         </button>`
-      : `<button class="btn-outline-primary" data-action="favorite" data-slug="${escapeHtml(a.slug)}">
-           <i class="ion-heart"></i> Favorite Article (${a.favoritesCount})
-         </button>`
-    : ""
+      ? h(
+          "button",
+          {
+            className: "btn-outline-primary",
+            "data-action": "unfavorite",
+            "data-slug": a.slug,
+          },
+          h("i", { className: "ion-heart" }),
+          ` Unfavorite Article (${a.favoritesCount})`,
+        )
+      : h(
+          "button",
+          {
+            className: "btn-outline-primary",
+            "data-action": "favorite",
+            "data-slug": a.slug,
+          },
+          h("i", { className: "ion-heart" }),
+          ` Favorite Article (${a.favoritesCount})`,
+        )
+    : null
 
-  const editBtn = isAuthor
-    ? `<a href="#/editor/${escapeHtml(a.slug)}" class="btn-outline-primary" style="text-decoration:none">
-         <i class="ion-edit"></i> Edit Article
-       </a>`
-    : ""
+  const editBtn: VNode | null = isAuthor
+    ? h(
+        "a",
+        {
+          href: `#/editor/${a.slug}`,
+          className: "btn-outline-primary",
+          style: { textDecoration: "none" },
+        },
+        h("i", { className: "ion-edit" }),
+        " Edit Article",
+      )
+    : null
 
-  const deleteBtn = isAuthor
-    ? `<button class="btn-outline-danger" data-action="delete-article" data-slug="${escapeHtml(a.slug)}">
-         <i class="ion-trash-a"></i> Delete Article
-       </button>`
-    : ""
+  const deleteBtn: VNode | null = isAuthor
+    ? h(
+        "button",
+        {
+          className: "btn-outline-danger",
+          "data-action": "delete-article",
+          "data-slug": a.slug,
+        },
+        h("i", { className: "ion-trash-a" }),
+        " Delete Article",
+      )
+    : null
 
-  const articleMeta = `
-    <div class="article-meta">
-      <a href="#/@${escapeHtml(a.author.username)}">
-        <img src="${avatarUrl(a.author.image)}" alt="" />
-      </a>
-      <div class="info">
-        <a class="author" href="#/@${escapeHtml(a.author.username)}">${escapeHtml(a.author.username)}</a>
-        <span class="date">${formatDate(a.createdAt)}</span>
-      </div>
-      ${followBtn} ${favBtn} ${editBtn} ${deleteBtn}
-    </div>`
-
-  const commentForm = state.user
-    ? `<form class="comment-form" id="comment-form" data-slug="${escapeHtml(a.slug)}">
-         <textarea placeholder="Write a comment..." name="comment-body"></textarea>
-         <div class="card-footer">
-           <img src="${avatarUrl(state.user.image)}" alt="" style="width:30px;height:30px;border-radius:50%" />
-           <button class="btn btn-outline-primary" type="submit">Post Comment</button>
-         </div>
-       </form>`
-    : '<p><a href="#/login">Sign in</a> or <a href="#/register">sign up</a> to add comments on this article.</p>'
-
-  const comments = state.comments
-    .map((c) => {
-      const canDelete = state.user !== null && state.user.username === c.author.username
-      return `
-        <div class="comment">
-          <div class="card-block"><p>${escapeHtml(c.body)}</p></div>
-          <div class="card-footer">
-            <a href="#/@${escapeHtml(c.author.username)}">
-              <img src="${avatarUrl(c.author.image)}" alt="" />
-            </a>
-            <a class="author" href="#/@${escapeHtml(c.author.username)}">${escapeHtml(c.author.username)}</a>
-            <span class="date">${formatDate(c.createdAt)}</span>
-            ${canDelete ? `<span class="mod-options"><i class="ion-trash-a" data-action="delete-comment" data-slug="${escapeHtml(a.slug)}" data-id="${c.id}" style="cursor:pointer;margin-left:auto"></i></span>` : ""}
-          </div>
-        </div>`
-    })
-    .join("")
-
-  return `
-    <div class="article-page">
-      <div class="banner">
-        <div class="container">
-          <h1>${escapeHtml(a.title)}</h1>
-          ${articleMeta}
-        </div>
-      </div>
-      <div class="container">
-        <div class="article-content">
-          <p>${escapeHtml(a.body)}</p>
-        </div>
-        <hr />
-        ${articleMeta}
-        <div style="max-width:660px;margin:24px auto">
-          ${commentForm}
-          ${comments}
-        </div>
-      </div>
-    </div>`
+  return h(
+    "div",
+    { className: "article-meta" },
+    renderAuthorAvatar(a.author),
+    h(
+      "div",
+      { className: "info" },
+      h("a", { className: "author", href: `#/@${a.author.username}` }, a.author.username),
+      h("span", { className: "date" }, formatDate(a.createdAt)),
+    ),
+    followBtn,
+    " ",
+    favBtn,
+    " ",
+    editBtn,
+    " ",
+    deleteBtn,
+  )
 }
 
-const renderProfilePage = (state: AppState): string => {
-  if (state.loading && !state.profile) return '<div class="container"><p>Loading...</p></div>'
+const renderComment = (c: Comment, articleSlug: string, state: AppState): VNode => {
+  const canDelete = state.user !== null && state.user.username === c.author.username
+  return h(
+    "div",
+    { className: "comment", key: c.id },
+    h("div", { className: "card-block" }, h("p", null, c.body)),
+    h(
+      "div",
+      { className: "card-footer" },
+      h(
+        "a",
+        { href: `#/@${c.author.username}` },
+        h("img", { src: avatarUrl(c.author.image), alt: "" }),
+      ),
+      h("a", { className: "author", href: `#/@${c.author.username}` }, c.author.username),
+      h("span", { className: "date" }, formatDate(c.createdAt)),
+      canDelete
+        ? h(
+            "span",
+            { className: "mod-options" },
+            h("i", {
+              className: "ion-trash-a",
+              "data-action": "delete-comment",
+              "data-slug": articleSlug,
+              "data-id": String(c.id),
+              style: { cursor: "pointer", marginLeft: "auto" },
+            }),
+          )
+        : null,
+    ),
+  )
+}
+
+const renderArticlePage = (state: AppState): VNode => {
+  if (state.loading && !state.article) {
+    return h("div", { className: "container" }, h("p", null, "Loading..."))
+  }
+  const a = state.article
+  if (!a) return h("div", { className: "container" }, h("p", null, "Article not found."))
+
+  const commentForm: VNode = state.user
+    ? h(
+        "form",
+        { className: "comment-form", id: "comment-form", "data-slug": a.slug },
+        h("textarea", { placeholder: "Write a comment...", name: "comment-body" }),
+        h(
+          "div",
+          { className: "card-footer" },
+          h("img", {
+            src: avatarUrl(state.user.image),
+            alt: "",
+            style: { width: "30px", height: "30px", borderRadius: "50%" },
+          }),
+          h("button", { className: "btn btn-outline-primary", type: "submit" }, "Post Comment"),
+        ),
+      )
+    : h(
+        "p",
+        null,
+        h("a", { href: "#/login" }, "Sign in"),
+        " or ",
+        h("a", { href: "#/register" }, "sign up"),
+        " to add comments on this article.",
+      )
+
+  return h(
+    "div",
+    { className: "article-page" },
+    h(
+      "div",
+      { className: "banner" },
+      h("div", { className: "container" }, h("h1", null, a.title), renderArticleMeta(a, state)),
+    ),
+    h(
+      "div",
+      { className: "container" },
+      h("div", { className: "article-content" }, h("p", null, a.body)),
+      h("hr", null),
+      renderArticleMeta(a, state),
+      h(
+        "div",
+        { style: { maxWidth: "660px", margin: "24px auto" } },
+        commentForm,
+        ...state.comments.map((c) => renderComment(c, a.slug, state)),
+      ),
+    ),
+  )
+}
+
+const renderProfilePage = (state: AppState): VNode => {
+  if (state.loading && !state.profile) {
+    return h("div", { className: "container" }, h("p", null, "Loading..."))
+  }
   const p = state.profile
-  if (!p) return '<div class="container"><p>Profile not found.</p></div>'
+  if (!p) return h("div", { className: "container" }, h("p", null, "Profile not found."))
 
   const isMe = state.user !== null && state.user.username === p.username
-  const followBtn =
+  const followBtn: VNode | null =
     state.user && !isMe
       ? p.following
-        ? `<button class="btn-outline-primary" data-action="unfollow" data-username="${escapeHtml(p.username)}">
-             <i class="ion-minus-round"></i> Unfollow ${escapeHtml(p.username)}
-           </button>`
-        : `<button class="btn-outline-primary" data-action="follow" data-username="${escapeHtml(p.username)}">
-             <i class="ion-plus-round"></i> Follow ${escapeHtml(p.username)}
-           </button>`
-      : ""
+        ? h(
+            "button",
+            {
+              className: "btn-outline-primary",
+              "data-action": "unfollow",
+              "data-username": p.username,
+            },
+            h("i", { className: "ion-minus-round" }),
+            ` Unfollow ${p.username}`,
+          )
+        : h(
+            "button",
+            {
+              className: "btn-outline-primary",
+              "data-action": "follow",
+              "data-username": p.username,
+            },
+            h("i", { className: "ion-plus-round" }),
+            ` Follow ${p.username}`,
+          )
+      : null
 
   const isFavorites = state.currentPath.endsWith("/favorites")
   const myArticlesActive = !isFavorites ? " active" : ""
   const favArticlesActive = isFavorites ? " active" : ""
 
-  const articles =
+  const articles: VNode | Array<VNode> =
     state.profileArticles.length === 0
-      ? '<div class="article-preview">No articles are here... yet.</div>'
-      : state.profileArticles.map(renderArticlePreview).join("")
+      ? h("div", { className: "article-preview" }, "No articles are here... yet.")
+      : state.profileArticles.map(renderArticlePreview)
 
-  return `
-    <div class="profile-page">
-      <div class="banner" style="background:#f3f3f3;color:#373a3c">
-        <div class="container" style="text-align:center">
-          <img src="${avatarUrl(p.image)}" alt="" style="width:100px;height:100px;border-radius:50%;margin-bottom:16px" />
-          <h1 style="font-size:28px;text-shadow:none">${escapeHtml(p.username)}</h1>
-          <p style="font-weight:300;color:#aaa">${p.bio ? escapeHtml(p.bio) : ""}</p>
-          ${followBtn}
-        </div>
-      </div>
-      <div class="container">
-        <div class="feed-toggle">
-          <ul>
-            <li><a class="feed-tab${myArticlesActive}" href="#/@${escapeHtml(p.username)}">My Articles</a></li>
-            <li><a class="feed-tab${favArticlesActive}" href="#/@${escapeHtml(p.username)}/favorites">Favorited Articles</a></li>
-          </ul>
-        </div>
-        ${articles}
-          ${renderPagination(state.profileArticlesCount, state.currentPage)}
-      </div>
-    </div>`
+  return h(
+    "div",
+    { className: "profile-page" },
+    h(
+      "div",
+      { className: "banner", style: { background: "#f3f3f3", color: "#373a3c" } },
+      h(
+        "div",
+        { className: "container", style: { textAlign: "center" } },
+        h("img", {
+          src: avatarUrl(p.image),
+          alt: "",
+          style: {
+            width: "100px",
+            height: "100px",
+            borderRadius: "50%",
+            marginBottom: "16px",
+          },
+        }),
+        h("h1", { style: { fontSize: "28px", textShadow: "none" } }, p.username),
+        h("p", { style: { fontWeight: "300", color: "#aaa" } }, p.bio ? p.bio : ""),
+        followBtn,
+      ),
+    ),
+    h(
+      "div",
+      { className: "container" },
+      h(
+        "div",
+        { className: "feed-toggle" },
+        h(
+          "ul",
+          null,
+          h(
+            "li",
+            null,
+            h(
+              "a",
+              { className: `feed-tab${myArticlesActive}`, href: `#/@${p.username}` },
+              "My Articles",
+            ),
+          ),
+          h(
+            "li",
+            null,
+            h(
+              "a",
+              {
+                className: `feed-tab${favArticlesActive}`,
+                href: `#/@${p.username}/favorites`,
+              },
+              "Favorited Articles",
+            ),
+          ),
+        ),
+      ),
+      articles,
+      renderPagination(state.profileArticlesCount, state.currentPage),
+    ),
+  )
 }
 
-const renderPage = (state: AppState): string => {
+const renderPage = (state: AppState): VNode => {
   const path = state.currentPath
   if (path === "/login") return renderLoginPage(state)
   if (path === "/register") return renderRegisterPage(state)
@@ -1577,8 +1939,14 @@ const renderPage = (state: AppState): string => {
   return renderHomePage(state)
 }
 
-const renderApp = (state: AppState): string =>
-  `<div id="root">${renderNav(state.user, state.currentPath)}${renderPage(state)}${renderFooter()}</div>`
+const renderApp = (state: AppState): VNode =>
+  h(
+    "div",
+    { id: "root" },
+    renderNav(state.user, state.currentPath),
+    renderPage(state),
+    renderFooter(),
+  )
 
 // ---------------------------------------------------------------------------
 // App
@@ -1637,7 +2005,9 @@ const app = Effect.gen(function* () {
     Queue.offer(actions, { type: "route-changed", path: loc.path }),
   ).pipe(Effect.forkIn(scope))
 
-  // Event delegation
+  // Event delegation on the persistent root. Native listeners push typed
+  // Actions into the Queue. Tachys-rendered DOM bubbles events identically
+  // to real DOM, so this works unchanged from the morphdom variant.
   const root = yield* dom.element
 
   yield* Effect.sync(() => {
@@ -1762,8 +2132,8 @@ const app = Effect.gen(function* () {
     })
   })
 
-  // Render stream
-  const vdom$: Stream.Stream<string> = Stream.concat(
+  // Render pipeline: initial tick + action stream -> state -> VNode tree
+  const vdom$: Stream.Stream<VNode> = Stream.concat(
     Stream.make(undefined as undefined),
     Stream.fromQueue(actions).pipe(
       Stream.tap((action) => handleAction(action, refs, client, actions, routerSink, scope)),

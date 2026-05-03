@@ -1,6 +1,6 @@
-import { Effect, Function as F, Layer, Metric, Stream } from "effect"
+import { type Context, Effect, Function as F, Layer, Metric, Stream } from "effect"
 import { domEventCount, domRenderCount, instrumentService } from "effect-cycle-core"
-import { DOMSink, DOMSource } from "effect-cycle-dom"
+import { DOMSource } from "effect-cycle-dom"
 import { DevToolsConfig } from "./DevToolsConfig.js"
 
 // -------------------------------------------------------------------------------------
@@ -9,6 +9,9 @@ import { DevToolsConfig } from "./DevToolsConfig.js"
 
 /**
  * Wraps `DOMSource.select` with metrics, logging, and span instrumentation.
+ *
+ * Renderer-agnostic: works with any renderer's driver since `DOMSource`
+ * lives in `effect-cycle-dom` (the renderer-agnostic abstraction).
  *
  * @since 0.1.0
  */
@@ -34,19 +37,36 @@ export const instrumentDOMSource: Layer.Layer<DOMSource, never, DOMSource | DevT
   )
 
 // -------------------------------------------------------------------------------------
-// instrumentDOMSink
+// instrumentDOMSink (factory: takes the renderer's DOMSink Tag)
 // -------------------------------------------------------------------------------------
 
 /**
- * Wraps `DOMSink.render` with metrics, logging, and span instrumentation.
+ * Service shape required of any renderer's DOMSink Tag.
+ */
+type DOMSinkService<V> = {
+  readonly render: (vdom$: Stream.Stream<V>) => Effect.Effect<void>
+}
+
+/**
+ * Wraps a renderer's `DOMSink.render` with metrics, logging, and span
+ * instrumentation. Pass the renderer's `DOMSink` Tag to bind the layer
+ * to that renderer.
+ *
+ * @example
+ * ```ts
+ * import { DOMSink } from "effect-cycle-morphdom"
+ * const layer = instrumentDOMSink(DOMSink)
+ * ```
  *
  * @since 0.1.0
  */
-export const instrumentDOMSink: Layer.Layer<DOMSink, never, DOMSink | DevToolsConfig> =
+export const instrumentDOMSink = <Id, V>(
+  tag: Context.Tag<Id, DOMSinkService<V>>,
+): Layer.Layer<Id, never, Id | DevToolsConfig> =>
   Layer.unwrapEffect(
     Effect.gen(function* () {
       const config = yield* DevToolsConfig
-      return instrumentService(DOMSink, {
+      return instrumentService(tag, {
         render: (original) => (vdom$) => {
           const instrumented = vdom$.pipe(
             config.enableMetrics ? Stream.tap(() => Metric.increment(domRenderCount)) : F.identity,
@@ -63,16 +83,22 @@ export const instrumentDOMSink: Layer.Layer<DOMSink, never, DOMSink | DevToolsCo
   )
 
 // -------------------------------------------------------------------------------------
-// instrumentDOM: convenience merge
+// instrumentDOM (factory: combined source + sink)
 // -------------------------------------------------------------------------------------
 
 /**
- * Convenience layer that instruments both `DOMSource` and `DOMSink`.
+ * Convenience factory that instruments both `DOMSource` and the given
+ * renderer's `DOMSink`.
+ *
+ * @example
+ * ```ts
+ * import { DOMSink } from "effect-cycle-morphdom"
+ * const layer = instrumentDOM(DOMSink)
+ * ```
  *
  * @since 0.1.0
  */
-export const instrumentDOM: Layer.Layer<
-  DOMSource | DOMSink,
-  never,
-  DOMSource | DOMSink | DevToolsConfig
-> = Layer.merge(instrumentDOMSource, instrumentDOMSink)
+export const instrumentDOM = <Id, V>(
+  tag: Context.Tag<Id, DOMSinkService<V>>,
+): Layer.Layer<DOMSource | Id, never, DOMSource | Id | DevToolsConfig> =>
+  Layer.merge(instrumentDOMSource, instrumentDOMSink(tag))

@@ -1,8 +1,9 @@
 import type * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import type { Chunk, Effect, Layer, Ref } from "effect"
 import type { App } from "effect-cycle-core"
-import type { DOMSink, DOMSource, VNode } from "effect-cycle-dom"
+import type { DOMSource } from "effect-cycle-dom"
 import type { HTTPError, HTTPSink, HTTPSource } from "effect-cycle-http"
+import { DOMSink, type VNode } from "effect-cycle-morphdom"
 import type { Navigation, RouteLocation, RouterSink, RouterSource } from "effect-cycle-router"
 import {
   type CapturedRequest,
@@ -54,8 +55,9 @@ describe("TestDOMSource types", () => {
 })
 
 describe("TestDOMSink types", () => {
-  it("yields { layer, rendered: Ref<Chunk<VNode>> }", () => {
-    expectTypeOf(TestDOMSink).returns.toEqualTypeOf<
+  it("yields { layer, rendered: Ref<Chunk<VNode>> } when called with a DOMSink Tag", () => {
+    const call = () => TestDOMSink(DOMSink)
+    expectTypeOf(call).returns.toEqualTypeOf<
       Effect.Effect<{
         readonly layer: Layer.Layer<DOMSink>
         readonly rendered: Ref.Ref<Chunk.Chunk<VNode>>

@@ -3,8 +3,9 @@ import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 // @vitest-environment jsdom
 import { describe, expect, it } from "@effect/vitest"
 import { Chunk, Effect, Layer, Ref, Stream } from "effect"
-import { DOMSink, DOMSource } from "effect-cycle-dom"
+import { DOMSource } from "effect-cycle-dom"
 import { HTTPSink, HTTPSource } from "effect-cycle-http"
+import { DOMSink } from "effect-cycle-morphdom"
 import {
   TestDOMSink,
   TestDOMSource,
@@ -66,7 +67,7 @@ describe("TestDOMSource", () => {
 describe("TestDOMSink", () => {
   it.effect("captures rendered VNodes in order", () =>
     Effect.gen(function* () {
-      const { layer, rendered } = yield* TestDOMSink()
+      const { layer, rendered } = yield* TestDOMSink(DOMSink)
 
       const sink = yield* DOMSink.pipe(Effect.provide(layer))
       yield* sink.render(Stream.make("<p>hello</p>", "<p>world</p>"))
@@ -78,7 +79,7 @@ describe("TestDOMSink", () => {
 
   it.effect("starts with an empty rendered chunk", () =>
     Effect.gen(function* () {
-      const { layer, rendered } = yield* TestDOMSink()
+      const { layer, rendered } = yield* TestDOMSink(DOMSink)
 
       yield* DOMSink.pipe(Effect.provide(layer))
 
@@ -284,7 +285,7 @@ describe("runTest", () => {
     })
 
     const clickEvent = new Event("click")
-    const { layer: sinkLayer, rendered } = await Effect.runPromise(TestDOMSink())
+    const { layer: sinkLayer, rendered } = await Effect.runPromise(TestDOMSink(DOMSink))
     const sourceLayer = TestDOMSource({ ".btn": [clickEvent] })
     const layers = Layer.merge(sourceLayer, sinkLayer)
 

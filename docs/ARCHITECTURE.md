@@ -37,7 +37,7 @@ Every driver exposes two services: a **source** (reads from the outside world) a
 
 | Driver | Source | Sink |
 |--------|--------|------|
-| DOM | `DOMSource`: `select(selector)` returns `Stream<Event>` | `DOMSink`: `render(vdom$)` writes HTML to the DOM |
+| DOM | `DOMSource`: `select(selector, eventType)` returns `Stream<Event>` | `DOMSink`: `render(vdom$)` writes the renderer's `VNode` type to the DOM (HTML string for morphdom, `tachys/sync` `VNode` for tachys) |
 | HTTP | `HTTPSource`: `response(category)` for successful responses, `errors(category)` for `HTTPError`s | `HTTPSink`: `request(category, req$)` sends HTTP requests |
 | WebSocket | `WSSource`: `messages` stream + `connected` effect | `WSSink`: `send(msg$)` pushes messages to the socket |
 
@@ -59,15 +59,25 @@ All tag identifiers use the `"effect-cycle/"` prefix.
 
 Drivers are implemented as `Layer`s (specifically `Layer.scopedContext` or `Layer.scoped`), which ties their lifecycle to Effect's `Scope`. Resources are acquired on layer construction and released via `Effect.addFinalizer`.
 
-### DOM Driver
+### DOM Drivers
 
-`DOMDriverLive: Layer<DOMSource | DOMSink, DOMError, DOMConfig>`
+`DOMSource` (event capture) is renderer-agnostic and lives in `effect-cycle-dom`. Each renderer ships its own `DOMSink` with a unique tag identifier and a `DOMDriverLive` that bundles source + sink together. Apps pick exactly one renderer.
+
+`DOMSourceLive: Layer<DOMSource, DOMError, DOMConfig>` (in `effect-cycle-dom`)
 
 - Requires `DOMConfig` (defaults to `{ rootSelector: "#app" }`)
 - Queries `document.querySelector(rootSelector)` during construction; fails with `DOMError` if not found
-- `select(selector)` bridges `addEventListener`/`removeEventListener` into a `Stream` via `Stream.async`
-- `render(vdom$)` forks a fiber that drains the stream, using [morphdom](https://github.com/patrick-steele-idem/morphdom) for efficient DOM patching
-- Finalizer clears `root.innerHTML`
+- `select(selector, eventName)` bridges `addEventListener`/`removeEventListener` into a `Stream` via `Stream.async`
+- No finalizer; the source only observes events.
+
+`DOMDriverLive: Layer<DOMSource | DOMSink, DOMError, DOMConfig>` (in `effect-cycle-morphdom` / `effect-cycle-tachys`)
+
+- Composes `DOMSourceLive` with the renderer's `DOMSinkLive`
+- `render(vdom$)` forks a fiber that drains the stream:
+  - `effect-cycle-morphdom` uses [morphdom](https://github.com/patrick-steele-idem/morphdom) to diff HTML strings into the live DOM
+  - `effect-cycle-tachys` uses [tachys](https://github.com/joshburgess/tachys) (`tachys/sync`) to render a `VNode` tree
+- Finalizer clears the root (morphdom: sets `innerHTML = ""`; tachys: calls `Root.unmount()`)
+- The `DOMSink` Tag identifiers differ per renderer (`"effect-cycle/MorphdomSink"` vs `"effect-cycle/TachysSink"`), so attempting to merge two renderers in the same app surfaces a duplicate-tag mistake at the type level
 
 ### HTTP Driver
 
@@ -134,7 +144,7 @@ The key insight: drivers are expensive to create (DOM listeners, WebSocket conne
 
 ## Component Isolation
 
-The DOM driver provides `isolate(component, namespace)` to scope a component to a `[data-ns="${namespace}"]` subtree:
+Each renderer (`effect-cycle-morphdom`, `effect-cycle-tachys`) provides `isolate(component, namespace)` to scope a component to a `[data-ns="${namespace}"]` subtree:
 
 ```typescript
 export const isolate = <A, E, R>(
@@ -227,10 +237,11 @@ const instrumented = instrumentService(DOMSource, {
 
 `effect-cycle-devtools` provides pre-configured instrumentation layers:
 
-- `instrumentDOMSource` / `instrumentDOMSink` / `instrumentDOM`: metrics and logging for DOM operations
+- `instrumentDOMSource`: metrics and logging for `DOMSource` (renderer-agnostic)
+- `instrumentDOMSink(tag)` / `instrumentDOM(tag)`: parameterized over the renderer's `DOMSink` tag, so the same instrumentation works with morphdom or tachys
 - `instrumentHTTP`: metrics and logging for HTTP requests
 - `instrumentWS`: metrics and logging for WebSocket messages
-- `DevToolsLayer`: merges all of the above
+- `DevToolsLayer(tag)`: factory that bundles all of the above for the chosen `DOMSink`
 
 All controlled by `DevToolsConfig` with `logLevel`, `enableMetrics`, and `enableSpans` flags.
 
@@ -245,7 +256,7 @@ Each driver has source and sink test factories in `effect-cycle-testing`:
 | Factory | Signature |
 |---------|-----------|
 | `TestDOMSource` | `(events: Record<string, Event[]>) => Layer<DOMSource>` |
-| `TestDOMSink` | `() => { layer: Layer<DOMSink>, rendered: VNode[] }` |
+| `TestDOMSink` | `<Id, V>(tag: Context.Tag<Id, ...>) => Effect<{ layer: Layer<Id>, rendered: Ref<Chunk<V>> }>` (parameterized over the renderer's `DOMSink` tag) |
 | `TestHTTPSource` | `(responses: Record<string, HttpClientResponse[]>, errors?: Record<string, HTTPError[]>) => Layer<HTTPSource>` |
 | `TestHTTPSink` | `() => { layer: Layer<HTTPSink>, captured: { category, request }[] }` |
 | `TestWSSource` | `(messages: MessageEvent[]) => Layer<WSSource>` |
@@ -256,14 +267,17 @@ Source factories take scripted data and replay it. Sink factories capture what t
 ### Test Pattern
 
 ```typescript
+import { DOMSink } from "effect-cycle-morphdom"
+
 it.effect("my feature works", () =>
   Effect.gen(function* () {
-    const { layer: sinkLayer, rendered } = TestDOMSink()
+    const { layer: sinkLayer, rendered } = yield* TestDOMSink(DOMSink)
     const sourceLayer = TestDOMSource({ ".btn": [new Event("click")] })
 
     yield* myApp.pipe(Effect.provide(Layer.merge(sourceLayer, sinkLayer)))
 
-    expect(rendered).toEqual(["<div>clicked</div>"])
+    const chunk = yield* Ref.get(rendered)
+    expect(Chunk.toReadonlyArray(chunk)).toEqual(["<div>clicked</div>"])
   }),
 )
 ```
@@ -274,11 +288,16 @@ Tests use `@effect/vitest` with `it.effect` for running `Effect`s directly in te
 
 ```
 effect-cycle-core (no internal deps)
-  ├── effect-cycle-dom (peers: core)
+  ├── effect-cycle-dom (peers: core) — renderer-agnostic source
+  │     ├── effect-cycle-morphdom (peers: core, dom) — morphdom DOMSink + DOMDriverLive
+  │     └── effect-cycle-tachys   (peers: core, dom) — tachys/sync DOMSink + DOMDriverLive
   ├── effect-cycle-http (peers: core, @effect/platform)
   ├── effect-cycle-ws (peers: core)
-  ├── effect-cycle-testing (peers: core, dom, http, ws)
-  └── effect-cycle-devtools (peers: core, dom, http, ws)
+  ├── effect-cycle-router (peers: core)
+  ├── effect-cycle-testing (peers: core, dom, http, ws, router)
+  └── effect-cycle-devtools (peers: core, dom, http, ws, router)
 ```
+
+Apps depend on `effect-cycle-dom` plus exactly one renderer package. The `testing` and `devtools` packages depend only on `effect-cycle-dom` (not on a specific renderer); their renderer-aware helpers are parameterized by the `DOMSink` tag at the call site.
 
 All packages produce dual ESM + CJS output via Rollup + SWC, with TypeScript declarations generated by `tsc --emitDeclarationOnly`.

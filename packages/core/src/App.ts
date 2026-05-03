@@ -15,7 +15,8 @@ import type { Effect } from "effect"
  * @example
  * ```ts
  * import { Effect } from "effect"
- * import { DOMSource, DOMSink } from "effect-cycle-dom"
+ * import { DOMSource } from "effect-cycle-dom"
+ * import { DOMSink } from "effect-cycle-morphdom"
  *
  * const app: App<void, never, DOMSource | DOMSink> = Effect.gen(function* () {
  *   const dom = yield* DOMSource

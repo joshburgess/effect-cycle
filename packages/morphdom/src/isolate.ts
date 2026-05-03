@@ -3,9 +3,8 @@ import { fromDOMEvent } from "aeon-dom"
 import { toStream } from "aeon-effect"
 import { DefaultScheduler } from "aeon-scheduler"
 import { Context, Effect, Stream } from "effect"
+import { DOMError, DOMSource } from "effect-cycle-dom"
 import { DOMSink } from "./DOMSink.js"
-import { DOMSource } from "./DOMSource.js"
-import { DOMError } from "./errors.js"
 
 /**
  * Isolates a component into a namespaced DOM subtree.

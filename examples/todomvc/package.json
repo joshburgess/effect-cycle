@@ -12,7 +12,9 @@
   "dependencies": {
     "effect": "^3.14.0",
     "effect-cycle-core": "workspace:*",
-    "effect-cycle-dom": "workspace:*"
+    "effect-cycle-dom": "workspace:*",
+    "effect-cycle-tachys": "workspace:*",
+    "tachys": "^0.1.2"
   },
   "devDependencies": {
     "vite": "^7.0.0"

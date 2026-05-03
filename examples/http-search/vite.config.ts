@@ -10,6 +10,7 @@ export default defineConfig({
       "effect-cycle-core": path.resolve(__dirname, "../../packages/core/src/index.ts"),
       "effect-cycle-dom": path.resolve(__dirname, "../../packages/dom/src/index.ts"),
       "effect-cycle-http": path.resolve(__dirname, "../../packages/http/src/index.ts"),
+      "effect-cycle-tachys": path.resolve(__dirname, "../../packages/tachys/src/index.ts"),
     },
   },
 })

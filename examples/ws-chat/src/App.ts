@@ -11,8 +11,10 @@
  * itself never hard-codes infrastructure details.
  */
 import { Effect, Ref, Stream } from "effect"
-import { DOMSink, DOMSource } from "effect-cycle-dom"
+import { DOMSource } from "effect-cycle-dom"
+import { DOMSink, type VNode } from "effect-cycle-tachys"
 import { WSSink, WSSource } from "effect-cycle-ws"
+import { h } from "tachys/sync"
 
 const app = Effect.gen(function* () {
   const dom = yield* DOMSource
@@ -83,19 +85,29 @@ const app = Effect.gen(function* () {
 
   const trigger$ = Stream.mergeAll([wsEvents$, sendEvents$], { concurrency: 2 })
 
-  const vdom$ = trigger$.pipe(
+  const vdom$: Stream.Stream<VNode> = trigger$.pipe(
     Stream.mapEffect(() => Ref.get(messages)),
-    Stream.map((msgs) => {
-      const items = msgs.map((m) => `<li class="message">${m}</li>`).join("")
-
-      return `<div class="chat">
-        <ul class="message-list">${items}</ul>
-        <form class="chat-form">
-          <input class="chat-input" type="text" placeholder="Type a message…" />
-          <button class="send-btn" type="button">Send</button>
-        </form>
-      </div>`
-    }),
+    Stream.map((msgs) =>
+      h(
+        "div",
+        { className: "chat" },
+        h(
+          "ul",
+          { className: "message-list" },
+          ...msgs.map((m, i) => h("li", { className: "message", key: String(i) }, m)),
+        ),
+        h(
+          "form",
+          { className: "chat-form" },
+          h("input", {
+            className: "chat-input",
+            type: "text",
+            placeholder: "Type a message…",
+          }),
+          h("button", { className: "send-btn", type: "button" }, "Send"),
+        ),
+      ),
+    ),
   )
 
   yield* sink.render(vdom$)

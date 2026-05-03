@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from "@effect/vitest"
 import { Chunk, Effect, Fiber, Layer, Stream } from "effect"
-import { DOMConfig, DOMDriverLive, DOMError, DOMSink, DOMSource } from "effect-cycle-dom"
+import { DOMConfig, DOMError, DOMSource } from "effect-cycle-dom"
+import { DOMDriverLive, DOMSink } from "effect-cycle-tachys"
+import { h } from "tachys/sync"
 
 const makeTestConfig = (selector: string) => Layer.succeed(DOMConfig, { rootSelector: selector })
 
-describe("DOMDriverLive", () => {
+describe("DOMDriverLive (tachys)", () => {
   describe("DOMSource", () => {
     beforeEach(() => {
       document.body.innerHTML = `<div id="app"><button class="btn">Click</button></div>`
@@ -20,10 +22,8 @@ describe("DOMDriverLive", () => {
         const source = yield* DOMSource
         const stream = source.select(".btn", "click")
 
-        // Fork the take-one collection so the listener attaches before the click
         const fiber = yield* stream.pipe(Stream.take(1), Stream.runCollect, Effect.fork)
 
-        // Yield to let the forked fiber subscribe and attach the DOM listener
         yield* Effect.yieldNow()
         yield* Effect.yieldNow()
 
@@ -55,56 +55,24 @@ describe("DOMDriverLive", () => {
       document.body.innerHTML = ""
     })
 
-    it.effect("render sets innerHTML on the root element", () =>
+    it.effect("render mounts the VNode tree into the root element", () =>
       Effect.gen(function* () {
         const sink = yield* DOMSink
-        yield* sink.render(Stream.make("<p>hello</p>"))
+        yield* sink.render(Stream.make(h("p", null, "hello")))
 
-        // Yield to the scheduler to let the forked fiber run the synchronous stream
         yield* Effect.yieldNow()
         yield* Effect.yieldNow()
 
         const app = yield* Effect.sync(() => document.querySelector("#app"))
-        expect(app?.innerHTML).toBe("<p>hello</p>")
+        expect(app?.querySelector("p")?.textContent).toBe("hello")
       }).pipe(Effect.provide(DOMDriverLive), Effect.provide(makeTestConfig("#app"))),
     )
 
-    it.effect("finalizer clears innerHTML after scope closes", () =>
-      Effect.gen(function* () {
-        yield* Effect.scoped(
-          Effect.gen(function* () {
-            const sink = yield* DOMSink
-            yield* sink.render(Stream.make("<p>temporary</p>"))
-            // Yield to let the forked fiber process the synchronous stream
-            yield* Effect.yieldNow()
-            yield* Effect.yieldNow()
-            const app = yield* Effect.sync(() => document.querySelector("#app"))
-            expect(app?.innerHTML).toBe("<p>temporary</p>")
-          }).pipe(Effect.provide(DOMDriverLive), Effect.provide(makeTestConfig("#app"))),
-        )
-
-        // After scope closes, finalizer should have cleared innerHTML
-        const app = yield* Effect.sync(() => document.querySelector("#app"))
-        expect(app?.innerHTML).toBe("")
-      }),
-    )
-  })
-
-  describe("morphdom patching", () => {
-    beforeEach(() => {
-      document.body.innerHTML = `<div id="app"></div>`
-    })
-
-    afterEach(() => {
-      document.body.innerHTML = ""
-    })
-
-    it.effect("preserves DOM node identity when only content changes", () =>
+    it.effect("subsequent renders patch the existing tree", () =>
       Effect.gen(function* () {
         const sink = yield* DOMSink
 
-        // Render initial content
-        yield* sink.render(Stream.make(`<div id="x">old</div>`))
+        yield* sink.render(Stream.make(h("div", { id: "x" }, "old")))
         yield* Effect.yieldNow()
         yield* Effect.yieldNow()
 
@@ -112,8 +80,7 @@ describe("DOMDriverLive", () => {
         const originalNode = yield* Effect.sync(() => app?.querySelector("#x"))
         expect(originalNode?.textContent).toBe("old")
 
-        // Render updated content: morphdom should patch, not replace
-        yield* sink.render(Stream.make(`<div id="x">new</div>`))
+        yield* sink.render(Stream.make(h("div", { id: "x" }, "new")))
         yield* Effect.yieldNow()
         yield* Effect.yieldNow()
 
@@ -121,6 +88,24 @@ describe("DOMDriverLive", () => {
         expect(updatedNode?.textContent).toBe("new")
         expect(updatedNode).toBe(originalNode)
       }).pipe(Effect.provide(DOMDriverLive), Effect.provide(makeTestConfig("#app"))),
+    )
+
+    it.effect("unmounts after scope closes", () =>
+      Effect.gen(function* () {
+        yield* Effect.scoped(
+          Effect.gen(function* () {
+            const sink = yield* DOMSink
+            yield* sink.render(Stream.make(h("p", null, "temporary")))
+            yield* Effect.yieldNow()
+            yield* Effect.yieldNow()
+            const app = yield* Effect.sync(() => document.querySelector("#app"))
+            expect(app?.querySelector("p")?.textContent).toBe("temporary")
+          }).pipe(Effect.provide(DOMDriverLive), Effect.provide(makeTestConfig("#app"))),
+        )
+
+        const app = yield* Effect.sync(() => document.querySelector("#app"))
+        expect(app?.querySelector("p")).toBeNull()
+      }),
     )
   })
 

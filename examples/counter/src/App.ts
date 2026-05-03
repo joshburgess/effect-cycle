@@ -6,10 +6,16 @@
  *   2. Maintain local state in a Ref
  *   3. Yield DOMSink to push a stream of VNodes for rendering
  *
+ * Uses the tachys vDOM renderer (`effect-cycle-tachys`): `DOMSource` comes
+ * from `effect-cycle-dom`, while the renderer-specific `DOMSink` (and the
+ * `DOMDriverLive` wired up in main.ts) come from `effect-cycle-tachys`.
+ *
  * No drivers are constructed here; they are provided externally by `run()`.
  */
 import { Effect, Ref, Stream } from "effect"
-import { DOMSink, DOMSource } from "effect-cycle-dom"
+import { DOMSource } from "effect-cycle-dom"
+import { DOMSink, type VNode } from "effect-cycle-tachys"
+import { h } from "tachys/sync"
 
 // The app is just an Effect: no class, no framework lifecycle hooks.
 // effect-cycle's `run()` will provide DOMSource and DOMSink from the driver layer.
@@ -18,7 +24,7 @@ const app = Effect.gen(function* () {
   // The driver scopes all selectors to the root element configured in DOMConfig.
   const dom = yield* DOMSource
 
-  // DOMSink receives a stream of VNodes (plain HTML strings) and writes them to the DOM.
+  // DOMSink receives a stream of tachys VNodes and renders each emission into the root.
   const sink = yield* DOMSink
 
   // Local mutable state: Effect's Ref is a pure, concurrent-safe cell.
@@ -36,23 +42,24 @@ const app = Effect.gen(function* () {
     .pipe(Stream.tap(() => Ref.update(count, (n) => n - 1)))
 
   // Stream.mergeAll fans-in both event streams into one.
-  // After each interaction we read the current count and map it to HTML.
-  const vdom$ = Stream.mergeAll([inc$, dec$], { concurrency: 2 }).pipe(
+  // After each interaction we read the current count and map it to a VNode tree.
+  const vdom$: Stream.Stream<VNode> = Stream.mergeAll([inc$, dec$], { concurrency: 2 }).pipe(
     // After each click, read the latest count value from the Ref.
     Stream.mapEffect(() => Ref.get(count)),
-    // Produce a VNode (HTML string) reflecting current state.
-    Stream.map(
-      (n) =>
-        `<div>
-        <h1>Count: ${n}</h1>
-        <button class="decrement">-</button>
-        <button class="increment">+</button>
-      </div>`,
+    // Produce a VNode reflecting current state.
+    Stream.map((n) =>
+      h(
+        "div",
+        null,
+        h("h1", null, `Count: ${n}`),
+        h("button", { className: "decrement" }, "-"),
+        h("button", { className: "increment" }, "+"),
+      ),
     ),
   )
 
   // Handing the vdom$ stream to the sink starts the render loop.
-  // The sink subscribes to vdom$ and writes each VNode into root.innerHTML.
+  // The sink subscribes to vdom$ and patches the DOM on each emission.
   yield* sink.render(vdom$)
 })
 

@@ -14,8 +14,9 @@ import { FetchHttpClient } from "@effect/platform"
  */
 import { Layer } from "effect"
 import { run } from "effect-cycle-core"
-import { DOMConfigDefault, DOMDriverLive } from "effect-cycle-dom"
+import { DOMConfigDefault } from "effect-cycle-dom"
 import { HTTPDriverConfigured } from "effect-cycle-http"
+import { DOMDriverLive } from "effect-cycle-tachys"
 import app from "./App.js"
 
 const domDrivers = DOMDriverLive.pipe(Layer.provide(DOMConfigDefault), Layer.orDie)

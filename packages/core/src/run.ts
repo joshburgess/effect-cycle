@@ -20,7 +20,8 @@ import type { App } from "./App.js"
  * ```ts
  * import { Layer } from "effect"
  * import { run } from "effect-cycle-core"
- * import { DOMDriverLive, DOMConfigDefault } from "effect-cycle-dom"
+ * import { DOMConfigDefault } from "effect-cycle-dom"
+ * import { DOMDriverLive } from "effect-cycle-morphdom"
  *
  * const drivers = DOMDriverLive.pipe(Layer.provide(DOMConfigDefault), Layer.orDie)
  * const fiber = run(app, drivers)

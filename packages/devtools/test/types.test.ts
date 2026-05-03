@@ -16,8 +16,9 @@ import {
   instrumentWSSink,
   instrumentWSSource,
 } from "effect-cycle-devtools"
-import type { DOMSink, DOMSource } from "effect-cycle-dom"
+import type { DOMSource } from "effect-cycle-dom"
 import type { HTTPSink, HTTPSource } from "effect-cycle-http"
+import { DOMSink } from "effect-cycle-morphdom"
 import type { RouterSink, RouterSource } from "effect-cycle-router"
 import type { WSSink, WSSource } from "effect-cycle-ws"
 import { describe, expectTypeOf, it } from "vitest"
@@ -51,14 +52,14 @@ describe("instrumentDOM types", () => {
     >()
   })
 
-  it("instrumentDOMSink: Layer<DOMSink, never, DOMSink | DevToolsConfig>", () => {
-    expectTypeOf(instrumentDOMSink).toEqualTypeOf<
+  it("instrumentDOMSink(tag): Layer<DOMSink, never, DOMSink | DevToolsConfig>", () => {
+    expectTypeOf(instrumentDOMSink(DOMSink)).toEqualTypeOf<
       Layer.Layer<DOMSink, never, DOMSink | DevToolsConfig>
     >()
   })
 
-  it("instrumentDOM: Layer<DOMSource | DOMSink, never, DOMSource | DOMSink | DevToolsConfig>", () => {
-    expectTypeOf(instrumentDOM).toEqualTypeOf<
+  it("instrumentDOM(tag): Layer<DOMSource | DOMSink, never, DOMSource | DOMSink | DevToolsConfig>", () => {
+    expectTypeOf(instrumentDOM(DOMSink)).toEqualTypeOf<
       Layer.Layer<DOMSource | DOMSink, never, DOMSource | DOMSink | DevToolsConfig>
     >()
   })
@@ -140,6 +141,6 @@ describe("DevToolsLayer types", () => {
       | RouterSource
       | RouterSink
       | DevToolsConfig
-    expectTypeOf(DevToolsLayer).toEqualTypeOf<Layer.Layer<Provided, never, Required>>()
+    expectTypeOf(DevToolsLayer(DOMSink)).toEqualTypeOf<Layer.Layer<Provided, never, Required>>()
   })
 })

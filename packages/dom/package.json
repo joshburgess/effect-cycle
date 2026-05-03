@@ -1,7 +1,7 @@
 {
   "name": "effect-cycle-dom",
   "version": "0.1.0",
-  "description": "DOM driver for effect-cycle",
+  "description": "Renderer-agnostic DOM source (event capture) for effect-cycle",
   "license": "MIT",
   "author": "Josh Burgess",
   "type": "module",
@@ -29,7 +29,6 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "morphdom": "^2.7.0",
     "aeon-core": "^0.3.2",
     "aeon-types": "^0.2.0",
     "aeon-scheduler": "^0.3.0",

@@ -31,7 +31,9 @@ pnpm test        # should show all tests passing
 ```
 packages/
   core/       App type, run, HMR, observability, metrics
-  dom/        DOM driver (DOMSource, DOMSink, morphdom, isolation)
+  dom/        Renderer-agnostic DOM source (event capture, isolation primitives)
+  morphdom/   Morphdom DOM sink (HTML-string diff renderer)
+  tachys/     Tachys DOM sink (vDOM renderer via tachys/sync)
   http/       HTTP driver (adapter-based routing, @effect/platform)
   ws/         WebSocket driver (managed lifecycle)
   router/     Router driver (hash/history modes)

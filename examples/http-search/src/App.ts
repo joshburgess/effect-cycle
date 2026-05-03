@@ -1,4 +1,3 @@
-import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 /**
  * HTTP Search example: debounced search with reactive HTTP requests.
  *
@@ -7,14 +6,17 @@ import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
  *   2. Debounced keystrokes are mapped to HttpClientRequest values
  *   3. HTTPSink.request dispatches them (keyed by category "search")
  *   4. HTTPSource.response("search") streams back the responses
- *   5. DOMSink renders the response body as HTML
+ *   5. DOMSink renders the response body as a tachys VNode tree
  *
  * The HTTP driver uses a PubSub internally to correlate requests → responses
  * by category, making it easy to have multiple independent request streams.
  */
+import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import { Effect, Stream } from "effect"
-import { DOMSink, DOMSource } from "effect-cycle-dom"
+import { DOMSource } from "effect-cycle-dom"
 import { HTTPSink, HTTPSource } from "effect-cycle-http"
+import { DOMSink, type VNode } from "effect-cycle-tachys"
+import { h } from "tachys/sync"
 
 const app = Effect.gen(function* () {
   const dom = yield* DOMSource
@@ -51,20 +53,27 @@ const app = Effect.gen(function* () {
 
   // HTTPSource.response gives a Stream<HttpClientResponse> for the category;
   // failures are surfaced separately via httpSource.errors(category).
-  const success$ = httpSource.response("search").pipe(
+  // The server returns raw HTML for the result list, so we embed it via
+  // dangerouslySetInnerHTML rather than trying to model it as a VNode tree.
+  const success$: Stream.Stream<VNode> = httpSource.response("search").pipe(
     Stream.mapEffect((response) =>
       // .text is an Effect<string, ResponseError> defined on HttpIncomingMessage.
       response.text.pipe(
-        Effect.map(
-          (body) =>
-            `<div class="results">
-              <ul>${body}</ul>
-            </div>`,
+        Effect.map((body) =>
+          h(
+            "div",
+            { className: "results" },
+            h("ul", { dangerouslySetInnerHTML: { __html: body } }),
+          ),
         ),
         // On body-read error, render a friendly message.
         Effect.orElse(() =>
           Effect.succeed(
-            `<div class="results error">Could not read response body. Please try again.</div>`,
+            h(
+              "div",
+              { className: "results error" },
+              "Could not read response body. Please try again.",
+            ),
           ),
         ),
       ),
@@ -72,12 +81,15 @@ const app = Effect.gen(function* () {
   )
 
   // Render an error message whenever the driver reports a failure.
-  const errors$ = httpSource
+  const errors$: Stream.Stream<VNode> = httpSource
     .errors("search")
     .pipe(
-      Stream.map(
-        (err) =>
-          `<div class="results error">Search request failed (status ${err.status}). Please try again.</div>`,
+      Stream.map((err) =>
+        h(
+          "div",
+          { className: "results error" },
+          `Search request failed (status ${err.status}). Please try again.`,
+        ),
       ),
     )
 

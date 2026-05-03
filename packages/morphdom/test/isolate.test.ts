@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from "@effect/vitest"
 import { Chunk, Effect, Fiber, Layer, Option, Queue, Ref, Stream } from "effect"
-import { DOMConfig, DOMDriverLive, DOMSource, isolate } from "effect-cycle-dom"
+import { DOMConfig, DOMSource } from "effect-cycle-dom"
+import { DOMDriverLive, isolate } from "effect-cycle-morphdom"
 
 const makeTestConfig = (selector: string) => Layer.succeed(DOMConfig, { rootSelector: selector })
 
-describe("isolate", () => {
+describe("isolate (morphdom)", () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="app">
@@ -25,16 +26,12 @@ describe("isolate", () => {
     Effect.gen(function* () {
       const queue = yield* Queue.unbounded<string>()
 
-      // The component runs within isolate's scope. All click-dispatch
-      // happens inside the component Effect, before the scope closes.
       const component = Effect.gen(function* () {
         const source = yield* DOMSource
         const stream = source.select(".btn", "click")
 
-        // Fork the take-one collection so the listener attaches before the click
         const fiber = yield* stream.pipe(Stream.take(1), Stream.runCollect, Effect.fork)
 
-        // Yield to let the forked fiber subscribe and attach the DOM listener
         yield* Effect.yieldNow()
         yield* Effect.yieldNow()
 
@@ -49,13 +46,11 @@ describe("isolate", () => {
         const ns = target.closest("[data-ns]")?.getAttribute("data-ns") ?? "root"
         yield* Queue.offer(queue, ns)
 
-        // Now click the root button: isolated component should NOT receive this
         yield* Effect.sync(() => {
           const rootBtn = document.querySelector("#app > .btn") as HTMLButtonElement
           rootBtn.click()
         })
 
-        // Yield to let any spurious events flush
         yield* Effect.yieldNow()
         yield* Effect.yieldNow()
       })

@@ -13,7 +13,8 @@
  */
 import { ConfigProvider, Layer } from "effect"
 import { run } from "effect-cycle-core"
-import { DOMConfigDefault, DOMDriverLive } from "effect-cycle-dom"
+import { DOMConfigDefault } from "effect-cycle-dom"
+import { DOMDriverLive } from "effect-cycle-tachys"
 import { WSConfigFromEnv, WSDriverLive } from "effect-cycle-ws"
 import app from "./App.js"
 

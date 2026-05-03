@@ -43,6 +43,7 @@
     "@effect/vitest": "^0.29.0",
     "effect-cycle-core": "workspace:*",
     "effect-cycle-dom": "workspace:*",
+    "effect-cycle-morphdom": "workspace:*",
     "effect-cycle-http": "workspace:*",
     "effect-cycle-router": "workspace:*",
     "effect-cycle-ws": "workspace:*",

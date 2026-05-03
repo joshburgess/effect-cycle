@@ -9,18 +9,23 @@ Your app is a pure function from **sources** (inputs) to **sinks** (outputs). Al
 | Package | Description |
 |---|---|
 | `effect-cycle-core` | `App` type, `run`, `makeManagedRuntime`, `HotRuntime`, observability primitives |
-| `effect-cycle-dom` | DOM driver: `DOMSource`, `DOMSink`, morphdom-based rendering, component isolation |
+| `effect-cycle-dom` | Renderer-agnostic DOM source: `DOMSource`, `DOMSourceLive`, event capture, isolation primitives |
+| `effect-cycle-morphdom` | Morphdom renderer: `DOMSink`, `DOMDriverLive`, HTML-string diffing, `isolate` |
+| `effect-cycle-tachys` | Tachys renderer: `DOMSink`, `DOMDriverLive`, vDOM rendering via `tachys/sync`, `isolate` |
 | `effect-cycle-http` | HTTP driver: adapter-based request routing, `@effect/platform` HttpClient, Schema validation |
 | `effect-cycle-ws` | WebSocket driver: lifecycle-managed connections with `Layer.scoped` |
 | `effect-cycle-router` | Router driver: hash or history-based routing with `RouterSource`/`RouterSink` |
 | `effect-cycle-testing` | Test doubles for every driver: `TestDOMSource`, `TestHTTPSink`, etc. |
 | `effect-cycle-devtools` | Observability layer: metrics, spans, and logging for all drivers |
 
+`DOMSource` (event capture) is rendererless and lives in `effect-cycle-dom`. Pick **one** renderer per app: `effect-cycle-morphdom` for HTML-string diffing or `effect-cycle-tachys` for the [tachys](https://github.com/joshburgess/tachys) vDOM library. Each renderer ships its own `DOMSink` Tag (with the same TypeScript identifier) plus a fully composed `DOMDriverLive` that pairs with `DOMSourceLive`.
+
 ## Quick Start
 
 ```typescript
 import { Effect, Ref, Stream } from "effect"
-import { DOMSink, DOMSource } from "effect-cycle-dom"
+import { DOMSource } from "effect-cycle-dom"
+import { DOMSink } from "effect-cycle-morphdom"
 
 const app = Effect.gen(function* () {
   const dom = yield* DOMSource
@@ -53,8 +58,9 @@ Run it:
 
 ```typescript
 import { Layer } from "effect"
-import { DOMConfigDefault, DOMDriverLive } from "effect-cycle-dom"
 import { run } from "effect-cycle-core"
+import { DOMConfigDefault } from "effect-cycle-dom"
+import { DOMDriverLive } from "effect-cycle-morphdom"
 
 run(app, DOMDriverLive.pipe(Layer.provide(DOMConfigDefault)))
 ```
@@ -67,12 +73,15 @@ Swap live drivers for test doubles. No mocking libraries, no module patching:
 import { describe, expect, it } from "@effect/vitest"
 import { Chunk, Effect, Layer, Stream } from "effect"
 import { DOMSource } from "effect-cycle-dom"
+import { DOMSink } from "effect-cycle-morphdom"
 import { TestDOMSource, TestDOMSink } from "effect-cycle-testing"
 
 describe("counter", () => {
   it.effect("increments on click", () =>
     Effect.gen(function* () {
-      const { layer: sinkLayer, rendered } = TestDOMSink()
+      // TestDOMSink is parameterized by the renderer's DOMSink Tag,
+      // so it works with both effect-cycle-morphdom and effect-cycle-tachys.
+      const { layer: sinkLayer, rendered } = yield* TestDOMSink(DOMSink)
       const sourceLayer = TestDOMSource({
         ".increment": [new Event("click")],
       })
@@ -169,11 +178,11 @@ const app = Effect.gen(function* () {
 
 ## Component Isolation
 
-The DOM driver provides `isolate` to scope a component to a `[data-ns]` subtree:
+Each renderer provides `isolate` to scope a component to a `[data-ns]` subtree:
 
 ```typescript
 import { Effect } from "effect"
-import { isolate } from "effect-cycle-dom"
+import { isolate } from "effect-cycle-morphdom"
 
 const TodoItem = (todo: Todo) => Effect.gen(function* () {
   const dom = yield* DOMSource
@@ -212,9 +221,12 @@ Wrap drivers with metrics and span instrumentation:
 ```typescript
 import { Layer } from "effect"
 import { DevToolsLayer, DevToolsConfigDefault } from "effect-cycle-devtools"
+import { DOMSink } from "effect-cycle-morphdom"
 
+// DevToolsLayer is parameterized by the renderer's DOMSink Tag so it can
+// instrument either morphdom or tachys without coupling devtools to a renderer.
 const instrumentedDrivers = Layer.provide(
-  DevToolsLayer,
+  DevToolsLayer(DOMSink),
   Layer.mergeAll(DOMDriverLive, HTTPDriverLive, DevToolsConfigDefault),
 )
 ```
@@ -292,7 +304,9 @@ pnpm lint:fix    # Auto-fix lint issues
 ```
 packages/
   core/       Core types, run, HMR, observability
-  dom/        DOM driver (source, sink, morphdom, isolation)
+  dom/        Renderer-agnostic DOM source (event capture, isolation primitives)
+  morphdom/   Morphdom DOM sink (HTML-string diff renderer)
+  tachys/     Tachys DOM sink (vDOM renderer via tachys/sync)
   http/       HTTP driver (adapter-based routing)
   ws/         WebSocket driver (managed lifecycle)
   router/     Router driver (hash/history routing)
