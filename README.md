@@ -12,13 +12,21 @@ Your app is a pure function from **sources** (inputs) to **sinks** (outputs). Al
 | `effect-cycle-dom` | Renderer-agnostic DOM source: `DOMSource`, `DOMSourceLive`, event capture, isolation primitives |
 | `effect-cycle-morphdom` | Morphdom renderer: `DOMSink`, `DOMDriverLive`, HTML-string diffing, `isolate` |
 | `effect-cycle-tachys` | Tachys renderer: `DOMSink`, `DOMDriverLive`, vDOM rendering via `tachys/sync`, `isolate` |
+| `effect-cycle-preact` | Preact renderer: `DOMSink`, `DOMDriverLive`, vDOM rendering via `preact`, `isolate` |
+| `effect-cycle-react` | React renderer: `DOMSink`, `DOMDriverLive`, vDOM rendering via `react-dom/client`, `isolate` |
+| `effect-cycle-lit-html` | lit-html renderer: `DOMSink`, `DOMDriverLive`, tagged-template rendering, `isolate` |
+| `effect-cycle-vue` | Vue 3 renderer: `DOMSink`, `DOMDriverLive`, vDOM rendering via `vue`, `isolate` |
+| `effect-cycle-solid` | Solid renderer: `ReactiveSink`, `ReactiveDriverLive`, signal-based fine-grained reactivity |
 | `effect-cycle-http` | HTTP driver: adapter-based request routing, `@effect/platform` HttpClient, Schema validation |
 | `effect-cycle-ws` | WebSocket driver: lifecycle-managed connections with `Layer.scoped` |
 | `effect-cycle-router` | Router driver: hash or history-based routing with `RouterSource`/`RouterSink` |
 | `effect-cycle-testing` | Test doubles for every driver: `TestDOMSource`, `TestHTTPSink`, etc. |
 | `effect-cycle-devtools` | Observability layer: metrics, spans, and logging for all drivers |
 
-`DOMSource` (event capture) is rendererless and lives in `effect-cycle-dom`. Pick **one** renderer per app: `effect-cycle-morphdom` for HTML-string diffing or `effect-cycle-tachys` for the [tachys](https://github.com/joshburgess/tachys) vDOM library. Each renderer ships its own `DOMSink` Tag (with the same TypeScript identifier) plus a fully composed `DOMDriverLive` that pairs with `DOMSourceLive`.
+`DOMSource` (event capture) is rendererless and lives in `effect-cycle-dom`. Pick **one** renderer per app:
+
+- `effect-cycle-morphdom`, `effect-cycle-tachys`, `effect-cycle-preact`, `effect-cycle-react`, `effect-cycle-lit-html`, and `effect-cycle-vue` all expose the same VDOM-style `DOMSink` Tag (a stream of renderer-specific `VNode`s) and a `DOMDriverLive` that pairs with `DOMSourceLive`.
+- `effect-cycle-solid` exposes a different contract, `ReactiveSink`, that mounts a component once and bridges Effect Streams to Solid signals via `fromStream(stream, initial) → Accessor`. Pushing whole trees through Solid would defeat its fine-grained reactivity, so it intentionally diverges from the VDOM sink shape.
 
 ## Quick Start
 
@@ -80,7 +88,8 @@ describe("counter", () => {
   it.effect("increments on click", () =>
     Effect.gen(function* () {
       // TestDOMSink is parameterized by the renderer's DOMSink Tag,
-      // so it works with both effect-cycle-morphdom and effect-cycle-tachys.
+      // so it works with any VDOM-style renderer (morphdom, tachys, preact,
+      // react, lit-html, vue).
       const { layer: sinkLayer, rendered } = yield* TestDOMSink(DOMSink)
       const sourceLayer = TestDOMSource({
         ".increment": [new Event("click")],
@@ -178,7 +187,7 @@ const app = Effect.gen(function* () {
 
 ## Component Isolation
 
-Each renderer provides `isolate` to scope a component to a `[data-ns]` subtree:
+Each VDOM-style renderer (morphdom, tachys, preact, react, lit-html, vue) provides `isolate` to scope a component to a `[data-ns]` subtree:
 
 ```typescript
 import { Effect } from "effect"
@@ -224,7 +233,8 @@ import { DevToolsLayer, DevToolsConfigDefault } from "effect-cycle-devtools"
 import { DOMSink } from "effect-cycle-morphdom"
 
 // DevToolsLayer is parameterized by the renderer's DOMSink Tag so it can
-// instrument either morphdom or tachys without coupling devtools to a renderer.
+// instrument any VDOM-style renderer (morphdom, tachys, preact, react,
+// lit-html, vue) without coupling devtools to a specific one.
 const instrumentedDrivers = Layer.provide(
   DevToolsLayer(DOMSink),
   Layer.mergeAll(DOMDriverLive, HTTPDriverLive, DevToolsConfigDefault),
@@ -252,7 +262,9 @@ import { WSConfigFromEnv } from "effect-cycle-ws"
 
 Working examples live in `examples/`:
 
-- **counter**: minimal DOM interaction (increment/decrement), with Vite HMR
+- **counter**: minimal DOM interaction (increment/decrement) using the tachys renderer, with Vite HMR
+- **counter-preact**, **counter-react**, **counter-lit-html**, **counter-vue**: same counter through each VDOM-style renderer; useful as starter templates and to validate the renderer-agnostic source/sink split
+- **counter-solid**: same counter through the signal-based `ReactiveSink`, demonstrating `fromStream(stream, initial) → Accessor` bridging
 - **http-search**: debounced search with the HTTP driver
 - **ws-chat**: WebSocket chat with lifecycle management
 - **todomvc**: component isolation with `isolate`, `Ref`-based shared state, forked child components
@@ -307,6 +319,11 @@ packages/
   dom/        Renderer-agnostic DOM source (event capture, isolation primitives)
   morphdom/   Morphdom DOM sink (HTML-string diff renderer)
   tachys/     Tachys DOM sink (vDOM renderer via tachys/sync)
+  preact/     Preact DOM sink (vDOM renderer)
+  react/      React DOM sink (vDOM renderer via react-dom/client)
+  lit-html/   lit-html DOM sink (tagged-template renderer)
+  vue/        Vue 3 DOM sink (vDOM renderer)
+  solid/      Solid ReactiveSink (signal-based fine-grained reactivity)
   http/       HTTP driver (adapter-based routing)
   ws/         WebSocket driver (managed lifecycle)
   router/     Router driver (hash/history routing)
@@ -314,12 +331,17 @@ packages/
   devtools/   DevTools instrumentation
 
 examples/
-  counter/        Minimal counter
-  http-search/    HTTP search with debounce
-  ws-chat/        WebSocket chat
-  todomvc/        TodoMVC with isolation
-  realworld/      Full Conduit SPA
-  realworld-api/  Mock API server
+  counter/           Minimal counter (tachys)
+  counter-preact/    Counter via Preact renderer
+  counter-react/     Counter via React renderer
+  counter-lit-html/  Counter via lit-html renderer
+  counter-vue/       Counter via Vue 3 renderer
+  counter-solid/     Counter via Solid ReactiveSink
+  http-search/       HTTP search with debounce
+  ws-chat/           WebSocket chat
+  todomvc/           TodoMVC with isolation
+  realworld/         Full Conduit SPA
+  realworld-api/     Mock API server
 ```
 
 ### Tooling
