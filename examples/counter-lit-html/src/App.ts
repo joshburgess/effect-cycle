@@ -1,16 +1,16 @@
 /**
  * Counter (lit-html) example: the same counter app as `examples/counter`,
- * but rendered through `effect-cycle-lit` instead of `effect-cycle-tachys`.
+ * but rendered through `effect-cycle-lit-html` instead of `effect-cycle-tachys`.
  *
  * The application code is renderer-agnostic apart from:
- *   - `DOMSink` and `VNode` come from `effect-cycle-lit`
+ *   - `DOMSink` and `VNode` come from `effect-cycle-lit-html`
  *   - The view is built with lit-html's `html` tagged template instead of `h(...)`
  *
  * Everything else (DOMSource, Ref, Stream wiring) is identical.
  */
 import { Effect, Ref, Stream } from "effect"
 import { DOMSource } from "effect-cycle-dom"
-import { DOMSink, type VNode } from "effect-cycle-lit"
+import { DOMSink, type VNode } from "effect-cycle-lit-html"
 import { html } from "lit-html"
 
 const app = Effect.gen(function* () {

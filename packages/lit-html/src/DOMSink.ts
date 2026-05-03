@@ -9,7 +9,7 @@ import type { VNode } from "./VNode.js"
  *
  * @since 0.1.0
  */
-export class DOMSink extends Context.Tag("effect-cycle/LitSink")<
+export class DOMSink extends Context.Tag("effect-cycle/LitHtmlSink")<
   DOMSink,
   {
     /**

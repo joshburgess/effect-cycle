@@ -1,5 +1,5 @@
 {
-  "name": "example-counter-lit",
+  "name": "example-counter-lit-html",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "effect": "^3.14.0",
     "effect-cycle-core": "workspace:*",
     "effect-cycle-dom": "workspace:*",
-    "effect-cycle-lit": "workspace:*",
+    "effect-cycle-lit-html": "workspace:*",
     "lit-html": "^3.0.0"
   },
   "devDependencies": {

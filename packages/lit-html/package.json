@@ -1,5 +1,5 @@
 {
-  "name": "effect-cycle-lit",
+  "name": "effect-cycle-lit-html",
   "version": "0.1.0",
   "description": "lit-html-backed renderer for effect-cycle",
   "license": "MIT",

@@ -9,7 +9,7 @@ export default defineConfig({
     alias: {
       "effect-cycle-core": path.resolve(__dirname, "../../packages/core/src/index.ts"),
       "effect-cycle-dom": path.resolve(__dirname, "../../packages/dom/src/index.ts"),
-      "effect-cycle-lit": path.resolve(__dirname, "../../packages/lit/src/index.ts"),
+      "effect-cycle-lit-html": path.resolve(__dirname, "../../packages/lit-html/src/index.ts"),
     },
   },
 })

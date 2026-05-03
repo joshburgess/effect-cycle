@@ -1,14 +1,14 @@
 import type { Effect, Layer, Stream } from "effect"
 import type { DOMError, DOMSource } from "effect-cycle-dom"
-import { type DOMSink, type VNode, isolate } from "effect-cycle-lit"
+import { type DOMSink, type VNode, isolate } from "effect-cycle-lit-html"
 import type { TemplateResult } from "lit-html"
 import { describe, expectTypeOf, it } from "vitest"
 
 // -------------------------------------------------------------------------------------
-// VNode (lit)
+// VNode (lit-html)
 // -------------------------------------------------------------------------------------
 
-describe("VNode (lit) type", () => {
+describe("VNode (lit-html) type", () => {
   it("aliases lit-html's TemplateResult", () => {
     expectTypeOf<VNode>().toEqualTypeOf<TemplateResult>()
   })
@@ -18,7 +18,7 @@ describe("VNode (lit) type", () => {
 // DOMSink shape
 // -------------------------------------------------------------------------------------
 
-describe("DOMSink (lit) type", () => {
+describe("DOMSink (lit-html) type", () => {
   it("render takes Stream<VNode> and returns Effect<void>", () => {
     const call = (s: DOMSink["Type"], v$: Stream.Stream<VNode>) => s.render(v$)
     expectTypeOf(call).returns.toEqualTypeOf<Effect.Effect<void>>()
@@ -29,7 +29,7 @@ describe("DOMSink (lit) type", () => {
 // isolate
 // -------------------------------------------------------------------------------------
 
-describe("isolate (lit) types", () => {
+describe("isolate (lit-html) types", () => {
   it("preserves A and unions DOMError into E, requires DOMSource | DOMSink", () => {
     const call = (component: Effect.Effect<number, "compFail", DOMSource | DOMSink>) =>
       isolate(component, "ns")

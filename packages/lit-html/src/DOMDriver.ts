@@ -51,7 +51,7 @@ export const DOMSinkLive: Layer.Layer<DOMSink, DOMError, DOMConfig> = Layer.scop
           }),
         ).pipe(Effect.forkIn(scope), Effect.asVoid),
     })
-  }).pipe(Effect.withSpan("LitSinkLive.acquire")),
+  }).pipe(Effect.withSpan("LitHtmlSinkLive.acquire")),
 )
 
 /**

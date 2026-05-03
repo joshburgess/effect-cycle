@@ -73,7 +73,7 @@ importers:
         specifier: ^7.0.0
         version: 7.3.2(@types/node@22.19.17)(jiti@2.6.1)(tsx@4.21.0)
 
-  examples/counter-lit:
+  examples/counter-lit-html:
     dependencies:
       effect:
         specifier: ^3.14.0
@@ -84,9 +84,9 @@ importers:
       effect-cycle-dom:
         specifier: workspace:*
         version: link:../../packages/dom
-      effect-cycle-lit:
+      effect-cycle-lit-html:
         specifier: workspace:*
-        version: link:../../packages/lit
+        version: link:../../packages/lit-html
       lit-html:
         specifier: ^3.0.0
         version: 3.3.2
@@ -374,7 +374,7 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
-  packages/lit:
+  packages/lit-html:
     dependencies:
       aeon-core:
         specifier: ^0.3.2

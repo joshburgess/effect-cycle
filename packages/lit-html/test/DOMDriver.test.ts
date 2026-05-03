@@ -2,12 +2,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "@effect/vitest"
 import { Chunk, Effect, Fiber, Layer, Stream } from "effect"
 import { DOMConfig, DOMError, DOMSource } from "effect-cycle-dom"
-import { DOMDriverLive, DOMSink } from "effect-cycle-lit"
+import { DOMDriverLive, DOMSink } from "effect-cycle-lit-html"
 import { html } from "lit-html"
 
 const makeTestConfig = (selector: string) => Layer.succeed(DOMConfig, { rootSelector: selector })
 
-describe("DOMDriverLive (lit)", () => {
+describe("DOMDriverLive (lit-html)", () => {
   describe("DOMSource", () => {
     beforeEach(() => {
       document.body.innerHTML = `<div id="app"><button class="btn">Click</button></div>`
