@@ -10,6 +10,7 @@
       "effect-cycle-preact": ["./packages/preact/src/index.ts"],
       "effect-cycle-react": ["./packages/react/src/index.ts"],
       "effect-cycle-lit-html": ["./packages/lit-html/src/index.ts"],
+      "effect-cycle-vue": ["./packages/vue/src/index.ts"],
       "effect-cycle-http": ["./packages/http/src/index.ts"],
       "effect-cycle-ws": ["./packages/ws/src/index.ts"],
       "effect-cycle-testing": ["./packages/testing/src/index.ts"],
