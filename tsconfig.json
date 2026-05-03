@@ -7,6 +7,7 @@
       "effect-cycle-dom": ["./packages/dom/src/index.ts"],
       "effect-cycle-morphdom": ["./packages/morphdom/src/index.ts"],
       "effect-cycle-tachys": ["./packages/tachys/src/index.ts"],
+      "effect-cycle-preact": ["./packages/preact/src/index.ts"],
       "effect-cycle-http": ["./packages/http/src/index.ts"],
       "effect-cycle-ws": ["./packages/ws/src/index.ts"],
       "effect-cycle-testing": ["./packages/testing/src/index.ts"],
