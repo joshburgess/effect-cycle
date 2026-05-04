@@ -32,6 +32,6 @@
     "lineWidth": 100
   },
   "files": {
-    "ignore": ["**/dist/**", "**/node_modules/**", "**/*.d.ts"]
+    "ignore": ["**/dist/**", "**/node_modules/**", "**/*.d.ts", "**/*.svelte"]
   }
 }

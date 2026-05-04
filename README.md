@@ -17,6 +17,7 @@ Your app is a pure function from **sources** (inputs) to **sinks** (outputs). Al
 | `effect-cycle-lit-html` | lit-html renderer: `DOMSink`, `DOMDriverLive`, tagged-template rendering, `isolate` |
 | `effect-cycle-vue` | Vue 3 renderer: `DOMSink`, `DOMDriverLive`, vDOM rendering via `vue`, `isolate` |
 | `effect-cycle-solid` | Solid renderer: `ReactiveSink`, `ReactiveDriverLive`, signal-based fine-grained reactivity |
+| `effect-cycle-svelte` | Svelte 5 renderer: `ReactiveSink`, `ReactiveDriverLive`, store-based reactivity, `mount`/`unmount` |
 | `effect-cycle-http` | HTTP driver: adapter-based request routing, `@effect/platform` HttpClient, Schema validation |
 | `effect-cycle-ws` | WebSocket driver: lifecycle-managed connections with `Layer.scoped` |
 | `effect-cycle-router` | Router driver: hash or history-based routing with `RouterSource`/`RouterSink` |
@@ -26,7 +27,7 @@ Your app is a pure function from **sources** (inputs) to **sinks** (outputs). Al
 `DOMSource` (event capture) is rendererless and lives in `effect-cycle-dom`. Pick **one** renderer per app:
 
 - `effect-cycle-morphdom`, `effect-cycle-tachys`, `effect-cycle-preact`, `effect-cycle-react`, `effect-cycle-lit-html`, and `effect-cycle-vue` all expose the same VDOM-style `DOMSink` Tag (a stream of renderer-specific `VNode`s) and a `DOMDriverLive` that pairs with `DOMSourceLive`.
-- `effect-cycle-solid` exposes a different contract, `ReactiveSink`, that mounts a component once and bridges Effect Streams to Solid signals via `fromStream(stream, initial) → Accessor`. Pushing whole trees through Solid would defeat its fine-grained reactivity, so it intentionally diverges from the VDOM sink shape.
+- `effect-cycle-solid` and `effect-cycle-svelte` expose a different contract, `ReactiveSink`, that mounts a component once and bridges Effect Streams to the framework's reactive primitives via `fromStream(stream, initial)`. Solid's bridge returns an `Accessor<A>`; Svelte's returns a `Readable<A>` store. Pushing whole trees through either would defeat their compile-time-tracked update paths, so they intentionally diverge from the VDOM sink shape.
 
 ## Quick Start
 
@@ -264,7 +265,7 @@ Working examples live in `examples/`:
 
 - **counter**: minimal DOM interaction (increment/decrement) using the tachys renderer, with Vite HMR
 - **counter-preact**, **counter-react**, **counter-lit-html**, **counter-vue**: same counter through each VDOM-style renderer; useful as starter templates and to validate the renderer-agnostic source/sink split
-- **counter-solid**: same counter through the signal-based `ReactiveSink`, demonstrating `fromStream(stream, initial) → Accessor` bridging
+- **counter-solid**, **counter-svelte**: same counter through the `ReactiveSink` contract, demonstrating `fromStream(stream, initial)` bridging into Solid `Accessor`s and Svelte `Readable` stores respectively
 - **http-search**: debounced search with the HTTP driver
 - **ws-chat**: WebSocket chat with lifecycle management
 - **todomvc**: component isolation with `isolate`, `Ref`-based shared state, forked child components
@@ -324,6 +325,7 @@ packages/
   lit-html/   lit-html DOM sink (tagged-template renderer)
   vue/        Vue 3 DOM sink (vDOM renderer)
   solid/      Solid ReactiveSink (signal-based fine-grained reactivity)
+  svelte/     Svelte 5 ReactiveSink (store-based reactivity)
   http/       HTTP driver (adapter-based routing)
   ws/         WebSocket driver (managed lifecycle)
   router/     Router driver (hash/history routing)
@@ -337,6 +339,7 @@ examples/
   counter-lit-html/  Counter via lit-html renderer
   counter-vue/       Counter via Vue 3 renderer
   counter-solid/     Counter via Solid ReactiveSink
+  counter-svelte/    Counter via Svelte 5 ReactiveSink
   http-search/       HTTP search with debounce
   ws-chat/           WebSocket chat
   todomvc/           TodoMVC with isolation

@@ -8,6 +8,7 @@
   { "path": "packages/lit-html/dist/index.js", "import": "*", "limit": "105 kB" },
   { "path": "packages/vue/dist/index.js", "import": "*", "limit": "150 kB" },
   { "path": "packages/solid/dist/index.js", "import": "*", "limit": "120 kB" },
+  { "path": "packages/svelte/dist/index.js", "import": "*", "limit": "115 kB" },
   { "path": "packages/http/dist/index.js", "import": "*", "limit": "170 kB" },
   { "path": "packages/ws/dist/index.js", "import": "*", "limit": "145 kB" },
   { "path": "packages/router/dist/index.js", "import": "*", "limit": "100 kB" },
