@@ -11,8 +11,10 @@ import type { App } from "effect-cycle-core"
  * a real DOM under jsdom and you need the runtime to outlive a synchronous
  * setup phase.
  *
- * The app is provided with `layers` and executed with `Effect.runPromise`.
- * Note that this returns a Promise; assertion ordering is your responsibility.
+ * The app is provided with `layers`, wrapped in `Effect.scoped`, and executed
+ * with `Effect.runPromise`. The `Effect.scoped` wrapper guarantees that
+ * driver finalizers (DOM cleanup, WebSocket close, etc.) run when the app
+ * completes, even though smoke tests typically don't depend on this.
  *
  * @param app - The effect-cycle app to run.
  * @param layers - Test driver layers satisfying the app's requirements.
@@ -21,4 +23,4 @@ import type { App } from "effect-cycle-core"
  * @since 0.1.0
  */
 export const runTest = <E, R>(app: App<void, E, R>, layers: Layer.Layer<R>): Promise<void> =>
-  Effect.runPromise(app.pipe(Effect.provide(layers)))
+  Effect.runPromise(Effect.scoped(app.pipe(Effect.provide(layers))))

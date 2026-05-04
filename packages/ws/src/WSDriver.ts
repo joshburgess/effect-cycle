@@ -36,6 +36,7 @@ const makeWSDriver = Effect.gen(function* () {
       }
       ws.addEventListener("open", onOpen)
       ws.addEventListener("error", onError)
+      return Effect.sync(cleanup)
     })
   })
 

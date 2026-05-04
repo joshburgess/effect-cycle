@@ -273,26 +273,30 @@ describe("runTest", () => {
     expect(results).toEqual(["events:1"])
   })
 
-  it("works with merged layers", async () => {
-    const results: Array<string> = []
+  it.effect("works with merged layers", () =>
+    Effect.gen(function* () {
+      const results: Array<string> = []
 
-    const app = Effect.gen(function* () {
-      const source = yield* DOMSource
-      const sink = yield* DOMSink
-      const events = yield* Stream.runCollect(source.select(".btn", "click"))
-      yield* sink.render(Stream.make(`<p>count:${events.length}</p>`))
-      yield* Effect.sync(() => results.push("done"))
-    })
+      const app = Effect.gen(function* () {
+        const source = yield* DOMSource
+        const sink = yield* DOMSink
+        const events = yield* Stream.runCollect(source.select(".btn", "click"))
+        yield* sink.render(Stream.make(`<p>count:${events.length}</p>`))
+        yield* Effect.sync(() => results.push("done"))
+      })
 
-    const clickEvent = new Event("click")
-    const { layer: sinkLayer, rendered } = await Effect.runPromise(TestDOMSink(DOMSink))
-    const sourceLayer = TestDOMSource({ ".btn": [clickEvent] })
-    const layers = Layer.merge(sourceLayer, sinkLayer)
+      const clickEvent = new Event("click")
+      const { layer: sinkLayer, rendered } = yield* TestDOMSink(DOMSink)
+      const sourceLayer = TestDOMSource({ ".btn": [clickEvent] })
+      const layers = Layer.merge(sourceLayer, sinkLayer)
 
-    await runTest(app, layers)
+      // runTest returns a Promise (its public contract), so cross the boundary
+      // explicitly via Effect.promise rather than calling Effect.runPromise.
+      yield* Effect.promise(() => runTest(app, layers))
 
-    expect(results).toEqual(["done"])
-    const items = Chunk.toReadonlyArray(await Effect.runPromise(Ref.get(rendered)))
-    expect(items).toEqual(["<p>count:1</p>"])
-  })
+      expect(results).toEqual(["done"])
+      const items = Chunk.toReadonlyArray(yield* Ref.get(rendered))
+      expect(items).toEqual(["<p>count:1</p>"])
+    }),
+  )
 })

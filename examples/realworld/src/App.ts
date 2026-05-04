@@ -289,7 +289,7 @@ const enrichResponseError = (
     const parsed = yield* Effect.try({
       try: () => JSON.parse(text) as unknown,
       catch: () => err,
-    }).pipe(Effect.catchAll(() => Effect.fail(err)))
+    })
     const decoded = yield* Schema.decodeUnknown(ApiErrorBodySchema)(parsed).pipe(
       Effect.catchAll(() => Effect.fail(err)),
     )

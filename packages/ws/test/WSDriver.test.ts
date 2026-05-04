@@ -1,6 +1,6 @@
-import { describe, expect, it } from "@effect/vitest"
-import { Effect, Layer, Queue, Ref, Stream } from "effect"
-import { WSError, WSSink, WSSource } from "effect-cycle-ws"
+import { afterEach, beforeEach, describe, expect, it } from "@effect/vitest"
+import { Effect, Fiber, Layer, Queue, Ref, Stream } from "effect"
+import { WSConfig, WSDriverLive, WSError, WSSink, WSSource } from "effect-cycle-ws"
 
 // ---------------------------------------------------------------------------
 // WSError unit tests
@@ -167,6 +167,96 @@ describe("WSSink", () => {
         expect(second).toBe("b")
         expect(third).toBe("c")
       }).pipe(Effect.provide(TestWSSinkLayer))
+    }),
+  )
+})
+
+// ---------------------------------------------------------------------------
+// WSDriverLive: real driver against a fake WebSocket
+// ---------------------------------------------------------------------------
+
+interface FakeListener {
+  type: string
+  handler: (e: Event) => void
+}
+
+class FakeWebSocket {
+  static OPEN = 1
+  static CLOSING = 2
+  static CLOSED = 3
+  readyState = 0
+  readonly listeners: Array<FakeListener> = []
+  closeCount = 0
+
+  addEventListener(type: string, handler: (e: Event) => void): void {
+    this.listeners.push({ type, handler })
+  }
+
+  removeEventListener(type: string, handler: (e: Event) => void): void {
+    const idx = this.listeners.findIndex((l) => l.type === type && l.handler === handler)
+    if (idx !== -1) this.listeners.splice(idx, 1)
+  }
+
+  send(_data: string | ArrayBuffer): void {}
+
+  close(): void {
+    this.closeCount += 1
+  }
+}
+
+const installFakeWebSocket = () => {
+  const created: Array<FakeWebSocket> = []
+  const original = (globalThis as unknown as { WebSocket: unknown }).WebSocket
+
+  class StubWebSocket extends FakeWebSocket {
+    constructor() {
+      super()
+      created.push(this)
+    }
+    // Mirror the static readyState constants the driver reads off the global.
+    static OPEN = FakeWebSocket.OPEN
+    static CLOSING = FakeWebSocket.CLOSING
+    static CLOSED = FakeWebSocket.CLOSED
+  }
+  ;(globalThis as unknown as { WebSocket: unknown }).WebSocket = StubWebSocket
+  return {
+    created,
+    restore: () => {
+      ;(globalThis as unknown as { WebSocket: unknown }).WebSocket = original
+    },
+  }
+}
+
+describe("WSDriverLive: connected listener cleanup", () => {
+  let env: ReturnType<typeof installFakeWebSocket>
+
+  beforeEach(() => {
+    env = installFakeWebSocket()
+  })
+
+  afterEach(() => {
+    env.restore()
+  })
+
+  it.effect("removes open/error listeners when connected is interrupted", () =>
+    Effect.gen(function* () {
+      const driver = WSDriverLive.pipe(Layer.provide(Layer.succeed(WSConfig, { url: "ws://test" })))
+
+      yield* Effect.gen(function* () {
+        const source = yield* WSSource
+        // Fork connected so we can interrupt it before "open"/"error" fires.
+        const fiber = yield* Effect.fork(source.connected)
+        // Yield once so the async callback registers its listeners.
+        yield* Effect.yieldNow()
+
+        const ws = env.created[0]
+        expect(ws).toBeDefined()
+        expect(ws!.listeners.map((l) => l.type).sort()).toEqual(["error", "open"])
+
+        yield* Fiber.interrupt(fiber)
+
+        expect(ws!.listeners).toEqual([])
+      }).pipe(Effect.scoped, Effect.provide(driver))
     }),
   )
 })
