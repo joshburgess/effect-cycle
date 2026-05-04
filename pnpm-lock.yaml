@@ -721,6 +721,10 @@ importers:
         version: 5.9.3
 
   packages/testing:
+    dependencies:
+      aeon-scheduler:
+        specifier: ^0.3.0
+        version: 0.3.0
     devDependencies:
       '@effect/platform':
         specifier: ^0.78.0

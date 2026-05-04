@@ -28,6 +28,9 @@
     "test": "vitest run",
     "clean": "rm -rf dist"
   },
+  "dependencies": {
+    "aeon-scheduler": "^0.3.0"
+  },
   "peerDependencies": {
     "effect": "^3.14.0",
     "@effect/vitest": "^0.29.0",

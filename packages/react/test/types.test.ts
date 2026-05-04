@@ -1,5 +1,5 @@
 import type { Effect, Layer, Stream } from "effect"
-import type { DOMError, DOMSource } from "effect-cycle-dom"
+import type { DOMError, DOMScheduler, DOMSource } from "effect-cycle-dom"
 import { type DOMSink, type VNode, isolate } from "effect-cycle-react"
 import type { ReactElement } from "react"
 import { describe, expectTypeOf, it } from "vitest"
@@ -30,11 +30,11 @@ describe("DOMSink (react) type", () => {
 // -------------------------------------------------------------------------------------
 
 describe("isolate (react) types", () => {
-  it("preserves A and unions DOMError into E, requires DOMSource | DOMSink", () => {
+  it("preserves A and unions DOMError into E, requires DOMSource | DOMSink | DOMScheduler", () => {
     const call = (component: Effect.Effect<number, "compFail", DOMSource | DOMSink>) =>
       isolate(component, "ns")
     expectTypeOf(call).returns.toEqualTypeOf<
-      Effect.Effect<number, "compFail" | DOMError, DOMSource | DOMSink>
+      Effect.Effect<number, "compFail" | DOMError, DOMSource | DOMSink | DOMScheduler>
     >()
   })
 })

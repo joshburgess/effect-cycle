@@ -1,7 +1,7 @@
 import type * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import type { Chunk, Effect, Layer, Ref } from "effect"
 import type { App } from "effect-cycle-core"
-import type { DOMSource } from "effect-cycle-dom"
+import type { DOMScheduler, DOMSource } from "effect-cycle-dom"
 import type { HTTPError, HTTPSink, HTTPSource } from "effect-cycle-http"
 import { DOMSink, type VNode } from "effect-cycle-morphdom"
 import type { Navigation, RouteLocation, RouterSink, RouterSource } from "effect-cycle-router"
@@ -48,9 +48,9 @@ describe("runTest types", () => {
 // -------------------------------------------------------------------------------------
 
 describe("TestDOMSource types", () => {
-  it("returns Layer<DOMSource>", () => {
+  it("returns Layer<DOMSource | DOMScheduler>", () => {
     const call = (events: Record<string, ReadonlyArray<Event>>) => TestDOMSource(events)
-    expectTypeOf(call).returns.toEqualTypeOf<Layer.Layer<DOMSource>>()
+    expectTypeOf(call).returns.toEqualTypeOf<Layer.Layer<DOMSource | DOMScheduler>>()
   })
 })
 

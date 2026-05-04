@@ -63,14 +63,15 @@ Drivers are implemented as `Layer`s (specifically `Layer.scopedContext` or `Laye
 
 `DOMSource` (event capture) is renderer-agnostic and lives in `effect-cycle-dom`. Each renderer ships its own `DOMSink` with a unique tag identifier and a `DOMDriverLive` that bundles source + sink together. Apps pick exactly one renderer.
 
-`DOMSourceLive: Layer<DOMSource, DOMError, DOMConfig>` (in `effect-cycle-dom`)
+`DOMSourceLive: Layer<DOMSource | DOMScheduler, DOMError, DOMConfig>` (in `effect-cycle-dom`)
 
 - Requires `DOMConfig` (defaults to `{ rootSelector: "#app" }`)
 - Queries `document.querySelector(rootSelector)` during construction; fails with `DOMError` if not found
 - `select(selector, eventName)` bridges `addEventListener`/`removeEventListener` into a `Stream` via `Stream.async`
+- Also provides `DOMScheduler` (a single aeon `DefaultScheduler`) so `isolate` calls reuse the driver's microtask queue instead of allocating one per component
 - No finalizer; the source only observes events.
 
-`DOMDriverLive: Layer<DOMSource | DOMSink, DOMError, DOMConfig>` (in `effect-cycle-morphdom` / `effect-cycle-tachys`)
+`DOMDriverLive: Layer<DOMSource | DOMSink | DOMScheduler, DOMError, DOMConfig>` (in `effect-cycle-morphdom` / `effect-cycle-tachys`)
 
 - Composes `DOMSourceLive` with the renderer's `DOMSinkLive`
 - `render(vdom$)` forks a fiber that drains the stream:
@@ -150,7 +151,11 @@ Each renderer (`effect-cycle-morphdom`, `effect-cycle-tachys`) provides `isolate
 export const isolate = <A, E, R>(
   component: Effect.Effect<A, E, R>,
   namespace: string,
-): Effect.Effect<A, E | DOMError, Exclude<R, DOMSource | DOMSink> | DOMSource | DOMSink>
+): Effect.Effect<
+  A,
+  E | DOMError,
+  Exclude<R, DOMSource | DOMSink> | DOMSource | DOMSink | DOMScheduler
+>
 ```
 
 Isolation works by:
@@ -255,7 +260,7 @@ Each driver has source and sink test factories in `effect-cycle-testing`:
 
 | Factory | Signature |
 |---------|-----------|
-| `TestDOMSource` | `(events: Record<string, Event[]>) => Layer<DOMSource>` |
+| `TestDOMSource` | `(events: Record<string, Event[]>) => Layer<DOMSource \| DOMScheduler>` |
 | `TestDOMSink` | `<Id, V>(tag: Context.Tag<Id, ...>) => Effect<{ layer: Layer<Id>, rendered: Ref<Chunk<V>> }>` (parameterized over the renderer's `DOMSink` tag) |
 | `TestHTTPSource` | `(responses: Record<string, HttpClientResponse[]>, errors?: Record<string, HTTPError[]>) => Layer<HTTPSource>` |
 | `TestHTTPSink` | `() => { layer: Layer<HTTPSink>, captured: { category, request }[] }` |

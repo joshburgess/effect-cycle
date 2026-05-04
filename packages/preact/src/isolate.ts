@@ -1,9 +1,8 @@
 import { merge } from "aeon-core"
 import { fromDOMEvent } from "aeon-dom"
 import { toStream } from "aeon-effect"
-import { DefaultScheduler } from "aeon-scheduler"
 import { Context, Effect, Stream } from "effect"
-import { DOMError, DOMSource } from "effect-cycle-dom"
+import { DOMError, DOMScheduler, DOMSource } from "effect-cycle-dom"
 import { DOMSink } from "./DOMSink.js"
 
 /**
@@ -32,11 +31,16 @@ import { DOMSink } from "./DOMSink.js"
 export const isolate = <A, E, R>(
   component: Effect.Effect<A, E, R>,
   namespace: string,
-): Effect.Effect<A, E | DOMError, Exclude<R, DOMSource | DOMSink> | DOMSource | DOMSink> =>
+): Effect.Effect<
+  A,
+  E | DOMError,
+  Exclude<R, DOMSource | DOMSink> | DOMSource | DOMSink | DOMScheduler
+> =>
   Effect.scoped(
     Effect.gen(function* () {
       const parentSource = yield* DOMSource
       const parentSink = yield* DOMSink
+      const scheduler = yield* DOMScheduler
 
       const nsSelector = `[data-ns="${namespace}"]`
 
@@ -54,8 +58,6 @@ export const isolate = <A, E, R>(
           ),
         ),
       )
-
-      const scheduler = yield* Effect.sync(() => new DefaultScheduler())
 
       const namespacedSource: DOMSource["Type"] = {
         select: (selector: string, eventType: string) => {
