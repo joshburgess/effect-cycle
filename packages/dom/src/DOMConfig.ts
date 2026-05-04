@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect"
+import { Context, Layer } from "effect"
 
 /**
  * Configuration for the DOM driver.
@@ -18,4 +18,6 @@ export class DOMConfig extends Context.Tag("effect-cycle/DOMConfig")<
  *
  * @since 0.1.0
  */
-export const DOMConfigDefault = Layer.succeed(DOMConfig, { rootSelector: "#app" })
+export const DOMConfigDefault: Layer.Layer<DOMConfig> = Layer.succeed(DOMConfig, {
+  rootSelector: "#app",
+})

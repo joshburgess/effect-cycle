@@ -1,5 +1,6 @@
 export { DOMError } from "./errors.js"
 export { DOMConfig, DOMConfigDefault } from "./DOMConfig.js"
+export { DOMConfigFromEnv } from "./config.js"
 export { DOMScheduler } from "./DOMScheduler.js"
 export { DOMSource } from "./DOMSource.js"
 export { DOMSourceLive } from "./DOMSourceLive.js"
