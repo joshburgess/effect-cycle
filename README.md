@@ -244,20 +244,33 @@ const instrumentedDrivers = Layer.provide(
 
 ## Config
 
-HTTP and WebSocket drivers can read configuration from environment variables:
+Each driver ships a `*FromEnv` layer that reads its settings from Effect's
+`ConfigProvider`. Drop them in instead of the `*Default` layers when you
+want deploy-time values from the environment, build-time injection, or a
+remote config source.
 
 ```typescript
+import { DOMConfigFromEnv } from "effect-cycle-dom"
 import { HTTPDriverConfigured } from "effect-cycle-http"
+import { RouterConfigFromEnv } from "effect-cycle-router"
 import { WSConfigFromEnv } from "effect-cycle-ws"
 ```
 
 | Variable | Driver | Default |
 |---|---|---|
+| `DOM_ROOT_SELECTOR` | DOM | `"#app"` |
+| `ROUTER_MODE` | Router | `"hash"` (or `"history"`) |
+| `ROUTER_BASE` | Router | `""` |
 | `HTTP_BASE_URL` | HTTP | `""` (no prefix) |
 | `HTTP_TIMEOUT_MS` | HTTP | `30000` |
 | `HTTP_RETRIES` | HTTP | `0` |
 | `WS_URL` | WebSocket | (required) |
 | `WS_PROTOCOLS` | WebSocket | (optional, comma-separated) |
+
+Stack `ConfigProvider.fromMap` underneath `ConfigProvider.fromEnv()` via
+`ConfigProvider.orElse` to provide development-time defaults that the host
+environment can override; see `examples/ws-chat/src/main.ts` and
+`examples/realworld/src/main.ts` for the pattern.
 
 ## Examples
 

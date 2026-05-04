@@ -29,7 +29,9 @@ The frontend starts at `http://localhost:5173` and proxies API calls to `http://
 - One `Ref` per piece of state, snapshotted together with `Effect.all` before each render
 - JWT token management threaded through `HttpClientRequest` headers via app state
 - `HttpClient` used directly (without `HTTPSink`/`HTTPSource`) for complex request patterns
-- `RouterDriverLive` and `RouterConfigDefault` wiring
+- `RouterDriverLive` wiring with `RouterConfigFromEnv` reading `ROUTER_MODE` and `ROUTER_BASE` from `ConfigProvider`
+- `DOMConfigFromEnv` reading `DOM_ROOT_SELECTOR` from `ConfigProvider`
+- `ConfigProvider.orElse` for layering dev defaults underneath the process environment
 
 ## Key files
 
