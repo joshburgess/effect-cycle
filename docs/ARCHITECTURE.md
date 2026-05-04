@@ -203,12 +203,17 @@ Parse failures appear as typed `ParseError` in the stream's error channel. No `u
 
 ## Config Integration
 
-Drivers can read configuration from environment variables via `Effect.Config`:
+Each driver ships a `*FromEnv` layer that reads its settings from
+`Effect.Config` (i.e. the active `ConfigProvider`):
 
+- `DOMConfigFromEnv` reads `DOM_ROOT_SELECTOR` (default `"#app"`)
+- `RouterConfigFromEnv` reads `ROUTER_MODE` (`"hash"` | `"history"`, default `"hash"`) and `ROUTER_BASE` (default `""`)
 - `HTTPDriverConfigured` reads `HTTP_BASE_URL`, `HTTP_TIMEOUT_MS`, `HTTP_RETRIES` and applies them to the `HttpClient`
-- `WSConfigFromEnv` reads `WS_URL` (required) and `WS_PROTOCOLS` (optional)
+- `WSConfigFromEnv` reads `WS_URL` (required) and `WS_PROTOCOLS` (optional, comma-separated)
 
-Config layers compose like any other layer. They can be overridden in tests by providing explicit values.
+Config layers compose like any other layer. They can be overridden in tests
+by providing explicit values, or stacked with `ConfigProvider.orElse` to
+layer dev defaults underneath the host environment.
 
 ## Observability
 
@@ -224,6 +229,7 @@ Config layers compose like any other layer. They can be overridden in tests by p
 | `effect_cycle.ws.messages.sent` | WebSocket messages sent |
 | `effect_cycle.dom.events.total` | DOM events captured |
 | `effect_cycle.dom.renders.total` | DOM renders |
+| `effect_cycle.router.navigations.total` | Router navigations dispatched |
 
 ### instrumentService
 
@@ -246,6 +252,7 @@ const instrumented = instrumentService(DOMSource, {
 - `instrumentDOMSink(tag)` / `instrumentDOM(tag)`: parameterized over the renderer's `DOMSink` tag, so the same instrumentation works with morphdom or tachys
 - `instrumentHTTP`: metrics and logging for HTTP requests
 - `instrumentWS`: metrics and logging for WebSocket messages
+- `instrumentRouter`: metrics and logging for router navigations
 - `DevToolsLayer(tag)`: factory that bundles all of the above for the chosen `DOMSink`
 
 All controlled by `DevToolsConfig` with `logLevel`, `enableMetrics`, and `enableSpans` flags.
