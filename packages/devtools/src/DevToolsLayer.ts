@@ -3,6 +3,7 @@ import type { DOMSource } from "effect-cycle-dom"
 import type { HTTPSink, HTTPSource } from "effect-cycle-http"
 import type { RouterSink, RouterSource } from "effect-cycle-router"
 import type { WSSink, WSSource } from "effect-cycle-ws"
+import type { DevToolsBus } from "./DevToolsBus.js"
 import type { DevToolsConfig } from "./DevToolsConfig.js"
 import { instrumentDOM } from "./instrumentDOM.js"
 import { instrumentHTTP } from "./instrumentHTTP.js"
@@ -16,14 +17,27 @@ type DOMSinkService<V> = {
 /**
  * Combined instrumentation layer for all drivers (DOM, HTTP, WS, Router).
  *
- * Wraps existing driver services with logging, metrics, and spans
- * based on `DevToolsConfig`. The renderer's `DOMSink` Tag is passed in
- * so the layer is bound to that renderer.
+ * Wraps existing driver services with logging, metrics, spans, and
+ * (optionally) `DevToolsBus` event publication based on `DevToolsConfig`.
+ * The renderer's `DOMSink` Tag is passed in so the layer is bound to that
+ * renderer.
+ *
+ * Provide `DevToolsConfigDefault` (or your own `DevToolsConfig` layer) and
+ * either `DevToolsBusLive` or `DevToolsBusNoop` alongside this layer.
  *
  * @example
  * ```ts
  * import { DOMSink } from "effect-cycle-morphdom"
- * const layer = DevToolsLayer(DOMSink)
+ * import {
+ *   DevToolsLayer,
+ *   DevToolsConfigDefault,
+ *   DevToolsBusNoop,
+ * } from "effect-cycle-devtools"
+ *
+ * const layer = Layer.provide(
+ *   DevToolsLayer(DOMSink),
+ *   Layer.mergeAll(DevToolsConfigDefault, DevToolsBusNoop),
+ * )
  * ```
  *
  * @since 0.1.0
@@ -42,4 +56,5 @@ export const DevToolsLayer = <Id, V>(
   | RouterSource
   | RouterSink
   | DevToolsConfig
+  | DevToolsBus
 > => Layer.mergeAll(instrumentDOM(domSinkTag), instrumentHTTP, instrumentWS, instrumentRouter)

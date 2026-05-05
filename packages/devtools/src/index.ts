@@ -1,10 +1,12 @@
+export { DevToolsBus, DevToolsBusLive, DevToolsBusNoop } from "./DevToolsBus.js"
 export { DevToolsConfig, DevToolsConfigDefault } from "./DevToolsConfig.js"
-export { instrumentDOMSource, instrumentDOMSink, instrumentDOM } from "./instrumentDOM.js"
-export { instrumentHTTPSource, instrumentHTTPSink, instrumentHTTP } from "./instrumentHTTP.js"
-export {
-  instrumentRouterSource,
-  instrumentRouterSink,
-  instrumentRouter,
-} from "./instrumentRouter.js"
-export { instrumentWSSource, instrumentWSSink, instrumentWS } from "./instrumentWS.js"
+export { DevToolsEvent } from "./DevToolsEvent.js"
 export { DevToolsLayer } from "./DevToolsLayer.js"
+export { instrumentDOM, instrumentDOMSink, instrumentDOMSource } from "./instrumentDOM.js"
+export { instrumentHTTP, instrumentHTTPSink, instrumentHTTPSource } from "./instrumentHTTP.js"
+export {
+  instrumentRouter,
+  instrumentRouterSink,
+  instrumentRouterSource,
+} from "./instrumentRouter.js"
+export { instrumentWS, instrumentWSSink, instrumentWSSource } from "./instrumentWS.js"

@@ -10,6 +10,7 @@ import {
   wsSendCount,
 } from "effect-cycle-core"
 import {
+  DevToolsBusNoop,
   DevToolsConfig,
   DevToolsConfigDefault,
   instrumentDOMSource,
@@ -42,6 +43,7 @@ describe("DevToolsConfigDefault", () => {
       expect(config.logLevel).toBe("info")
       expect(config.enableMetrics).toBe(true)
       expect(config.enableSpans).toBe(true)
+      expect(config.enableEvents).toBe(false)
     }).pipe(Effect.provide(DevToolsConfigDefault)),
   )
 })
@@ -67,7 +69,11 @@ describe("instrumentDOMSource", () => {
       Effect.provide(
         Layer.provide(
           instrumentDOMSource,
-          Layer.merge(TestDOMSource({ ".btn": [new Event("click")] }), DevToolsConfigDefault),
+          Layer.mergeAll(
+            TestDOMSource({ ".btn": [new Event("click")] }),
+            DevToolsConfigDefault,
+            DevToolsBusNoop,
+          ),
         ),
       ),
     ),
@@ -83,13 +89,15 @@ describe("instrumentDOMSource", () => {
       Effect.provide(
         Layer.provide(
           instrumentDOMSource,
-          Layer.merge(
+          Layer.mergeAll(
             TestDOMSource({ ".link": [new Event("click"), new Event("click")] }),
             Layer.succeed(DevToolsConfig, {
               logLevel: "none",
               enableMetrics: false,
               enableSpans: false,
+              enableEvents: false,
             }),
+            DevToolsBusNoop,
           ),
         ),
       ),
@@ -113,7 +121,7 @@ describe("instrumentHTTP", () => {
         Effect.provide(
           Layer.provide(
             instrumentHTTP,
-            Layer.mergeAll(sourceLayer, sinkLayer, DevToolsConfigDefault),
+            Layer.mergeAll(sourceLayer, sinkLayer, DevToolsConfigDefault, DevToolsBusNoop),
           ),
         ),
       )
@@ -154,6 +162,7 @@ describe("instrumentWS", () => {
                 Layer.unwrapEffect,
               ),
               DevToolsConfigDefault,
+              DevToolsBusNoop,
             ),
           ),
         ),
@@ -177,7 +186,7 @@ describe("instrumentWS", () => {
         Effect.provide(
           Layer.provide(
             instrumentWS,
-            Layer.mergeAll(TestWSSource([]), wsSinkLayer, DevToolsConfigDefault),
+            Layer.mergeAll(TestWSSource([]), wsSinkLayer, DevToolsConfigDefault, DevToolsBusNoop),
           ),
         ),
       )
@@ -227,6 +236,7 @@ describe("instrumentRouter", () => {
               ]),
               routerSinkLayer,
               DevToolsConfigDefault,
+              DevToolsBusNoop,
             ),
           ),
         ),
