@@ -108,33 +108,39 @@ import { Effect, Context, Stream, Layer } from "effect"
 // ── Services are declared, not inferred ──
 // Each driver exposes a Source service (read) and consumes Sinks (write)
 
-class DOMSource extends Context.Tag("DOMSource")<
+class DOMSource extends Context.Tag("effect-cycle/DOMSource")<
   DOMSource,
   {
-    readonly select: (sel: string) => Stream.Stream<Event, never, never>
-    readonly element: Stream.Stream<Element, never, never>
+    readonly select: (selector: string, eventType: string) =>
+      Stream.Stream<Event>
+    readonly element: Effect.Effect<Element, DOMError>
   }
 >() {}
 
-class DOMSink extends Context.Tag("DOMSink")<
+class DOMSink extends Context.Tag("effect-cycle/DOMSink")<
   DOMSink,
   {
     readonly render: (vdom: Stream.Stream<VNode>) => Effect.Effect<void>
   }
 >() {}
 
-class HTTPSource extends Context.Tag("HTTPSource")<
+class HTTPSource extends Context.Tag("effect-cycle/HTTPSource")<
   HTTPSource,
   {
     readonly response: (category: string) =>
-      Stream.Stream<Response, HTTPError, never>
+      Stream.Stream<HttpClientResponse>
+    readonly errors: (category: string) =>
+      Stream.Stream<HTTPError>
   }
 >() {}
 
-class HTTPSink extends Context.Tag("HTTPSink")<
+class HTTPSink extends Context.Tag("effect-cycle/HTTPSink")<
   HTTPSink,
   {
-    readonly request: (req$: Stream.Stream<Request>) => Effect.Effect<void>
+    readonly request: (
+      category: string,
+      req$: Stream.Stream<HttpClientRequest>,
+    ) => Effect.Effect<void>
   }
 >() {}
 ```
@@ -148,11 +154,13 @@ const app = Effect.gen(function* () {
   const domSk  = yield* DOMSink
   const httpSk = yield* HTTPSink
 
-  const click$ = dom.select(".btn").pipe(
-    Stream.map(() => new Request("/api/data"))
+  const click$ = dom.select(".btn", "click").pipe(
+    Stream.map(() => HttpClientRequest.get("/api/data"))
   )
 
-  yield* httpSk.request(click$)
+  // Requests are routed by category; HTTPSource.response("data") streams
+  // back the matching responses. Failures appear separately on .errors("data").
+  yield* httpSk.request("data", click$)
 
   const response$ = http.response("data").pipe(
     Stream.map(renderView)
@@ -165,8 +173,12 @@ const app = Effect.gen(function* () {
 The inferred type of `app` is:
 
 ```typescript
-Effect.Effect<void, HTTPError, DOMSource | DOMSink | HTTPSource | HTTPSink>
-//            ^success ^error    ^requirements (all inferred automatically)
+Effect.Effect<void, never, DOMSource | DOMSink | HTTPSource | HTTPSink>
+//            ^success ^error  ^requirements (all inferred automatically)
+//
+// Note: HTTPError doesn't appear in the success channel because failures
+// are surfaced separately via HTTPSource.errors(category). When you map
+// .response() through code that can fail, those failures show up here.
 ```
 
 No circular inference. No generics gymnastics. The `R` channel accumulates requirements as you `yield*` services, and TypeScript tracks it all.
@@ -217,9 +229,13 @@ const DOMDriverLive = Layer.scoped(DOMSource,
   })
 )
 
+// Sketch only. The real `effect-cycle-http` driver pairs `HTTPSink` and
+// `HTTPSource` via a `PubSub<{ category, response }>` so multiple
+// subscribers can read the same category without consuming each other's
+// messages, and uses `@effect/platform` `HttpClient` rather than fetch.
 const HTTPDriverLive = Layer.scoped(HTTPSource,
   Effect.gen(function* () {
-    const pending = yield* Queue.unbounded<Request>()
+    const pending = yield* Queue.unbounded<HttpClientRequest>()
 
     yield* Effect.addFinalizer(() => Queue.shutdown(pending))
 
@@ -228,12 +244,12 @@ const HTTPDriverLive = Layer.scoped(HTTPSource,
         Stream.fromQueue(pending).pipe(
           Stream.filter((r) => r.url.includes(category)),
           Stream.mapEffect((req) =>
-            Effect.tryPromise({
-              try: () => fetch(req),
-              catch: (e) => new HTTPError({ cause: e }),
-            })
+            HttpClient.execute(req).pipe(
+              Effect.mapError((e) => new HTTPError({ cause: e }))
+            )
           )
         ),
+      errors: (_category: string) => Stream.empty,
     }
   })
 )
@@ -573,6 +589,18 @@ await ManagedRuntime.dispose(DevRuntime)
 
 No proxy subjects. No circular subscriptions. No reimplementation of half an Rx scheduler. Effect's runtime does all of that correctly and efficiently.
 
+The `effect-cycle-core` package ships this pattern as `run`, `makeManagedRuntime`, and `makeHotRuntime` / `installHmr`. `installHmr` is the one most apps use: it builds a `HotRuntime` over a `ManagedRuntime`, runs the app, and subscribes to Vite's `import.meta.hot` so HMR reloads interrupt the current fiber and restart with new app code while the driver layers stay live.
+
+```typescript
+import { installHmr } from "effect-cycle-core"
+import { DOMConfigDefault } from "effect-cycle-dom"
+import { DOMDriverLive } from "effect-cycle-morphdom"
+
+const drivers = DOMDriverLive.pipe(Layer.provide(DOMConfigDefault), Layer.orDie)
+
+installHmr(drivers, app, import.meta.hot)
+```
+
 ---
 
 ## 7. Bonus: What Else This Enables
@@ -619,13 +647,36 @@ const User = Schema.Struct({
 })
 
 const users$ = http.response("users").pipe(
-  Stream.mapEffect(
-    Schema.decodeUnknown(Schema.Array(User))
-  )
+  Stream.mapEffect((res) => res.json),
+  Stream.mapEffect(Schema.decodeUnknown(Schema.Array(User))),
 )
-// Stream<User[], ParseError, never>
-// Invalid data becomes a typed ParseError, not a runtime crash
+// Stream<User[], ParseError | ResponseError, never>
+// Invalid data becomes a typed ParseError, not a runtime crash.
+
+// `effect-cycle-http` ships `validatedResponseEffect` as a convenience
+// wrapper that yields the Stream directly from context:
+//
+//   const users$ = yield* validatedResponseEffect("users", Schema.Array(User))
 ```
+
+### Two Sink Shapes for Two Renderer Families
+
+Most renderer packages (`effect-cycle-morphdom`, `tachys`, `preact`, `react`, `lit-html`, `vue`) expose the same `DOMSink` Tag: a stream of renderer-specific `VNode`s flows through `DOMSink.render(vdom$: Stream<VNode>)`. Whole trees go in, the renderer diffs.
+
+Solid and Svelte intentionally diverge. They expose a `ReactiveSink` Tag that mounts a component **once** and bridges Effect Streams to the framework's reactive primitives:
+
+```typescript
+class ReactiveSink extends Context.Tag("effect-cycle/ReactiveSink")<
+  ReactiveSink,
+  {
+    readonly fromStream: <A>(s: Stream.Stream<A>, initial: A) =>
+      Effect.Effect<Accessor<A>>  // or Readable<A> for Svelte
+    readonly render: (component: () => JSX.Element) => Effect.Effect<void>
+  }
+>() {}
+```
+
+Pushing whole trees through Solid or Svelte would defeat the compile-time-tracked update paths that make those frameworks fast: only the text nodes that read a signal need to update, not the whole subtree. So the contract is reactive on the inside (signals/stores) and effect-y on the outside (Streams in, Effect out). `DOMSource` still works the same — only the sink shape differs.
 
 ### Config and Feature Flags
 
