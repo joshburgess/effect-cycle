@@ -1,4 +1,5 @@
 import path from "node:path"
+import { svelte } from "@sveltejs/vite-plugin-svelte"
 import solidPlugin from "vite-plugin-solid"
 import { defineConfig } from "vitest/config"
 
@@ -8,7 +9,12 @@ export default defineConfig({
   // builds under jsdom. Without it, vitest externalizes solid-js and Node's
   // resolver picks the server bundle, which throws "Client-only API called
   // on the server side". The plugin is a no-op for non-solid tests.
-  plugins: [solidPlugin()],
+  //
+  // The svelte plugin compiles `.svelte` files (the counter-svelte example
+  // imports Counter.svelte). Without it, vite's TS-only transform pipeline
+  // chokes on the `<script>...</script>` block. Both plugins are no-ops for
+  // tests that don't touch their respective renderers.
+  plugins: [solidPlugin(), svelte({ hot: false })],
   resolve: {
     alias: {
       "effect-cycle-core": path.resolve(__dirname, "packages/core/src/index.ts"),
