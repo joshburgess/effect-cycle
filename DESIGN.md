@@ -90,6 +90,20 @@ The system is organized into four layers. Each layer only knows about the one di
 └─────────────────────────────────────────────────┘
 ```
 
+The codebase is organized as a pnpm workspace. Driver contracts live in
+shared packages; concrete drivers and renderer adapters live in their
+own packages so apps depend only on what they use:
+
+- `effect-cycle-core` — runtime, `installHmr`, shared metrics, isolation
+- `effect-cycle-dom` — `DOMSource` Tag and shared DOM helpers
+- `effect-cycle-http` — `HTTPSource`/`HTTPSink` Tags and the live driver
+- `effect-cycle-ws` — `WSSource`/`WSSink` Tags and the live driver
+- `effect-cycle-router` — `RouterSource`/`RouterSink` Tags and the live driver
+- `effect-cycle-morphdom`, `-tachys`, `-preact`, `-react`, `-vue`, `-lit-html` — VDOM `DOMSink` adapters
+- `effect-cycle-solid`, `-svelte` — `ReactiveSink` adapters
+- `effect-cycle-testing` — `TestDOMSource`, `TestHTTPSink`, … for unit tests
+- `effect-cycle-devtools` — instrumentation layers, `DevToolsConfig`, `DevToolsBus`
+
 ---
 
 ## 1. The Core Type: App as a Pure Function, Now With Real Types
@@ -117,7 +131,10 @@ class DOMSource extends Context.Tag("effect-cycle/DOMSource")<
   }
 >() {}
 
-class DOMSink extends Context.Tag("effect-cycle/DOMSink")<
+// Each renderer package declares its own DOMSink Tag (same shape,
+// distinct identity): morphdom -> "effect-cycle/MorphdomSink",
+// preact -> "effect-cycle/PreactSink", and so on. The shape is shared.
+class DOMSink extends Context.Tag("effect-cycle/MorphdomSink")<
   DOMSink,
   {
     readonly render: (vdom: Stream.Stream<VNode>) => Effect.Effect<void>
@@ -214,17 +231,17 @@ const DOMDriverLive = Layer.scoped(DOMSource,
     )
 
     return {
-      select: (sel: string) =>
+      select: (sel: string, eventType: string) =>
         Stream.async<Event>((emit) => {
           const el = root.querySelector(sel)
           const handler = (e: Event) => emit.single(e)
-          el?.addEventListener("click", handler)
+          el?.addEventListener(eventType, handler)
           // Cleanup returned here runs when the stream consumer ends
           return Effect.sync(() =>
-            el?.removeEventListener("click", handler)
+            el?.removeEventListener(eventType, handler)
           )
         }),
-      element: Stream.make(root),
+      element: Effect.succeed(root),
     }
   })
 )
@@ -477,19 +494,19 @@ import { expect, test } from "vitest"
 // ── Test implementation: scripted DOM events ──
 const TestDOMDriver = (events: Record<string, Event[]>) =>
   Layer.succeed(DOMSource, {
-    select: (sel: string) =>
+    select: (sel: string, _eventType: string) =>
       Stream.fromIterable(events[sel] ?? []),
-    element: Stream.make(document.createElement("div")),
+    element: Effect.succeed(document.createElement("div")),
   })
 
 // ── Test implementation: capture HTTP requests ──
 const TestHTTPDriver = () => {
-  const captured: Request[] = []
+  const captured: { category: string; req: HttpClientRequest }[] = []
 
   const layer = Layer.succeed(HTTPSink, {
-    request: (req$) =>
-      Stream.runForEach(req$, (r) =>
-        Effect.sync(() => { captured.push(r) })
+    request: (category, req$) =>
+      Stream.runForEach(req$, (req) =>
+        Effect.sync(() => { captured.push({ category, req }) })
       ),
   })
 
@@ -512,7 +529,8 @@ test("clicking button sends HTTP request", async () => {
   )
 
   expect(captured).toHaveLength(3)
-  expect(captured[0].url).toBe("/api/data")
+  expect(captured[0].category).toBe("data")
+  expect(captured[0].req.url).toBe("/api/data")
 })
 ```
 
@@ -569,10 +587,19 @@ const run = <E>(
 For long-lived apps with hot reload support:
 
 ```typescript
+// `DevToolsLayer(tag)` wraps every driver service with logging,
+// metrics, spans, and (opt-in) DevToolsBus event publication. It needs
+// a `DevToolsConfig` and a `DevToolsBus` (use `DevToolsBusNoop` if no
+// inspector is subscribing).
+const Instrumented = Layer.provide(
+  DevToolsLayer(DOMSink),
+  Layer.mergeAll(DevToolsConfigDefault, DevToolsBusNoop),
+)
+
 const DevRuntime = ManagedRuntime.make(
   DriversLive.pipe(
     Layer.provide(Logger.pretty),
-    Layer.provide(DevToolsLayer),
+    Layer.provide(Instrumented),
   )
 )
 
@@ -633,6 +660,16 @@ const fetchUser = (id: string) =>
   )
 ```
 
+For driver-level observability, `effect-cycle-devtools` ships
+`DevToolsLayer(tag)`, which wraps every `*Source` and `*Sink` in the
+graph with optional logging, counters, spans, and a structured event
+stream. The event stream lives behind a `DevToolsBus` Tag: when
+`DevToolsConfig.enableEvents` is on, the layer publishes a tagged
+`DevToolsEvent` for every observable source emission, sink invocation,
+and driver state change. Inspector panels subscribe via
+`bus.events: Stream.Stream<DevToolsEvent>`. The bus is opt-in — provide
+`DevToolsBusNoop` to skip the PubSub cost in production.
+
 ### Schema Validation at Boundaries
 
 Effect Schema can validate data at driver boundaries:
@@ -661,12 +698,13 @@ const users$ = http.response("users").pipe(
 
 ### Two Sink Shapes for Two Renderer Families
 
-Most renderer packages (`effect-cycle-morphdom`, `tachys`, `preact`, `react`, `lit-html`, `vue`) expose the same `DOMSink` Tag: a stream of renderer-specific `VNode`s flows through `DOMSink.render(vdom$: Stream<VNode>)`. Whole trees go in, the renderer diffs.
+Most renderer packages (`effect-cycle-morphdom`, `effect-cycle-tachys`, `effect-cycle-preact`, `effect-cycle-react`, `effect-cycle-lit-html`, `effect-cycle-vue`) expose a `DOMSink` Tag with the same shape: a stream of renderer-specific `VNode`s flows through `render(vdom$: Stream<VNode>)`. Whole trees go in, the renderer diffs. Each package owns its own Tag (`"effect-cycle/MorphdomSink"`, `"effect-cycle/PreactSink"`, …) so apps depend on exactly one renderer at the type level.
 
-Solid and Svelte intentionally diverge. They expose a `ReactiveSink` Tag that mounts a component **once** and bridges Effect Streams to the framework's reactive primitives:
+Solid and Svelte intentionally diverge. `effect-cycle-solid` and `effect-cycle-svelte` each expose a `ReactiveSink` Tag (`"effect-cycle/SolidReactiveSink"`, `"effect-cycle/SvelteReactiveSink"`) that mounts a component **once** and bridges Effect Streams to the framework's reactive primitives:
 
 ```typescript
-class ReactiveSink extends Context.Tag("effect-cycle/ReactiveSink")<
+// Sketch — actual Tags live in effect-cycle-solid / effect-cycle-svelte.
+class ReactiveSink extends Context.Tag("effect-cycle/SolidReactiveSink")<
   ReactiveSink,
   {
     readonly fromStream: <A>(s: Stream.Stream<A>, initial: A) =>
