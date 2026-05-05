@@ -89,8 +89,12 @@ const wsChatApp = Effect.gen(function* () {
   const outgoing$ = Stream.make("hello", "world")
   yield* wsSink.send(outgoing$)
 
-  // Give the forked fiber a tick to process messages
-  yield* Effect.yieldNow()
+  // wsSink.send and the message-accumulator fork both run concurrently on
+  // forked fibers. Yield enough scheduling steps for both to drain before
+  // snapshotting messages for render.
+  for (let i = 0; i < 20; i += 1) {
+    yield* Effect.yieldNow()
+  }
 
   const msgs = yield* Ref.get(messages)
   const html = `<div>${msgs.map((m) => `<p>${m}</p>`).join("")}</div>`

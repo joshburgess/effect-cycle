@@ -183,6 +183,18 @@ describe("instrumentWS", () => {
       )
 
       yield* sink.send(Stream.make("ping", "pong"))
+      // TestWSSink forks its subscription (mirroring production WSSink);
+      // poll the captured Ref until both messages have been recorded.
+      yield* Effect.iterate(0, {
+        while: (i) => i < 100,
+        body: (i) =>
+          Effect.gen(function* () {
+            const items = yield* Ref.get(captured)
+            if (Chunk.size(items) >= 2) return 100
+            yield* Effect.yieldNow()
+            return i + 1
+          }),
+      })
 
       const items = yield* Ref.get(captured)
       expect(Chunk.size(items)).toBe(2)

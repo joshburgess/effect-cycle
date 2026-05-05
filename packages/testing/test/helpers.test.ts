@@ -212,6 +212,21 @@ describe("TestWSSource", () => {
 // TestWSSink
 // ---------------------------------------------------------------------------
 
+// TestWSSink.send forks its subscription (matching production WSSink),
+// so the calling effect doesn't block on bounded streams. Tests must wait
+// for the fork to drain before asserting on the captured Ref.
+const waitForChunkSize = <A>(ref: Ref.Ref<Chunk.Chunk<A>>, size: number) =>
+  Effect.iterate(0, {
+    while: (i) => i < 100,
+    body: (i) =>
+      Effect.gen(function* () {
+        const items = yield* Ref.get(ref)
+        if (Chunk.size(items) >= size) return 100
+        yield* Effect.yieldNow()
+        return i + 1
+      }),
+  })
+
 describe("TestWSSink", () => {
   it.effect("captures sent messages", () =>
     Effect.gen(function* () {
@@ -219,6 +234,7 @@ describe("TestWSSink", () => {
 
       const sink = yield* WSSink.pipe(Effect.provide(layer))
       yield* sink.send(Stream.make("hello", "world"))
+      yield* waitForChunkSize(captured, 2)
 
       const items = Chunk.toReadonlyArray(yield* Ref.get(captured))
       expect(items).toEqual(["hello", "world"])
@@ -232,6 +248,7 @@ describe("TestWSSink", () => {
 
       const sink = yield* WSSink.pipe(Effect.provide(layer))
       yield* sink.send(Stream.make(buf))
+      yield* waitForChunkSize(captured, 1)
 
       const items = Chunk.toReadonlyArray(yield* Ref.get(captured))
       expect(items.length).toBe(1)
