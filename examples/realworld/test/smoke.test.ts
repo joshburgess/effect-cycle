@@ -46,10 +46,15 @@ describe("realworld smoke", () => {
 
       const fiber = yield* Effect.fork(app.pipe(Effect.provide(layers)))
 
-      // Let the initial render pipeline run. readState does Effect.all over
-      // 16 Refs, so a handful of yields covers it deterministically.
-      for (let i = 0; i < 10; i += 1) {
+      // Poll until the initial render fires, capped so a regression that
+      // breaks the render path fails fast instead of hanging the suite.
+      const MAX_YIELDS = 500
+      let ticks = 0
+      while (ticks < MAX_YIELDS) {
+        const items = yield* Ref.get(rendered)
+        if (Chunk.size(items) >= 1) break
         yield* Effect.yieldNow()
+        ticks += 1
       }
 
       yield* Fiber.interrupt(fiber)
